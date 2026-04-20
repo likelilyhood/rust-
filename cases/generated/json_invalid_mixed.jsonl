@@ -1,0 +1,8 @@
+{"timestamp":"2026-04-20T12:30:00Z","path":"/api/orders","status":200,"latency_ms":30,"method":"GET","service":"gateway"}
+not-json
+{"timestamp":"2026-04-20T12:30:02Z","path":"/api/orders","status":"bad","latency_ms":55,"method":"GET","service":"gateway"}
+
+{"timestamp":"2026-04-20T12:30:04Z","path":"/api/users","status":503,"latency_ms":120,"method":"POST","service":"auth"}
+{"timestamp":"2026-04-20T12:30:05Z","path":"/api/users","status":200,"latency_ms":29,"method":"GET","service":"auth"}
+malformed:line:for:test
+{"timestamp":"2026-04-20T12:30:07Z","path":"/api/orders","status":200,"latency_ms":41,"method":"GET","service":"gateway"}

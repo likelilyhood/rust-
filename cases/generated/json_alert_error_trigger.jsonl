@@ -1,0 +1,6 @@
+{"timestamp":"2026-04-20T12:50:00Z","path":"/api/payments","status":500,"latency_ms":90,"method":"POST","service":"billing"}
+{"timestamp":"2026-04-20T12:50:01Z","path":"/api/payments","status":502,"latency_ms":110,"method":"POST","service":"billing"}
+{"timestamp":"2026-04-20T12:50:02Z","path":"/api/payments","status":503,"latency_ms":120,"method":"POST","service":"billing"}
+{"timestamp":"2026-04-20T12:50:03Z","path":"/api/payments","status":500,"latency_ms":130,"method":"POST","service":"billing"}
+{"timestamp":"2026-04-20T12:50:04Z","path":"/api/payments","status":200,"latency_ms":38,"method":"POST","service":"billing"}
+{"timestamp":"2026-04-20T12:50:05Z","path":"/api/payments","status":500,"latency_ms":128,"method":"POST","service":"billing"}

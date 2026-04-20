@@ -1,0 +1,6 @@
+# jsessionid as a path element parameter, delimited by , ; =
+10.1.2.3 - - [06/Mar/2012:00:07:45 -0600] "GET /MyApp/js/jquery-ui-1.8.16.custom.min.js;jsessionid=LFNznJS9bthi5s069LQILA__.ome-as5--myapp HTTP/1.1" 200 1284 "https://myapp.host.com/MyApp/" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:10.0.2) Gecko/20100101 Firefox/10.0.2"
+# HTTP request with no version identifier
+10.130.77.149 - - [12/Mar/2012:22:48:03 -0500] "GET /MyApp/" 200 4436 "-" "-"
+# 408 error, i.e. apache logs a client timeout
+82.61.252.142 - - [12/Mar/2012:20:07:38 -0500] "-" 408 - "-" "-"

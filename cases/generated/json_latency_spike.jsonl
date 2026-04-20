@@ -1,0 +1,8 @@
+{"timestamp":"2026-04-20T12:20:00Z","path":"/api/search","status":200,"latency_ms":32,"method":"GET","service":"search"}
+{"timestamp":"2026-04-20T12:20:01Z","path":"/api/search","status":200,"latency_ms":37,"method":"GET","service":"search"}
+{"timestamp":"2026-04-20T12:20:02Z","path":"/api/search","status":200,"latency_ms":41,"method":"GET","service":"search"}
+{"timestamp":"2026-04-20T12:20:03Z","path":"/api/search","status":200,"latency_ms":280,"method":"GET","service":"search"}
+{"timestamp":"2026-04-20T12:20:04Z","path":"/api/search","status":200,"latency_ms":320,"method":"GET","service":"search"}
+{"timestamp":"2026-04-20T12:20:05Z","path":"/api/search","status":200,"latency_ms":360,"method":"GET","service":"search"}
+{"timestamp":"2026-04-20T12:20:06Z","path":"/api/search","status":200,"latency_ms":47,"method":"GET","service":"search"}
+{"timestamp":"2026-04-20T12:20:07Z","path":"/api/search","status":200,"latency_ms":39,"method":"GET","service":"search"}

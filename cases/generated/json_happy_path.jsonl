@@ -1,0 +1,8 @@
+{"timestamp":"2026-04-20T12:00:00Z","path":"/api/orders","status":200,"latency_ms":32,"method":"GET","service":"gateway"}
+{"timestamp":"2026-04-20T12:00:01Z","path":"/api/orders","status":200,"latency_ms":40,"method":"GET","service":"gateway"}
+{"timestamp":"2026-04-20T12:00:02Z","path":"/api/users","status":201,"latency_ms":28,"method":"POST","service":"auth"}
+{"timestamp":"2026-04-20T12:00:03Z","path":"/api/orders","status":200,"latency_ms":36,"method":"GET","service":"gateway"}
+{"timestamp":"2026-04-20T12:00:04Z","path":"/api/health","status":200,"latency_ms":8,"method":"GET","service":"gateway"}
+{"timestamp":"2026-04-20T12:00:05Z","path":"/api/orders","status":200,"latency_ms":44,"method":"GET","service":"gateway"}
+{"timestamp":"2026-04-20T12:00:06Z","path":"/api/users","status":200,"latency_ms":31,"method":"GET","service":"auth"}
+{"timestamp":"2026-04-20T12:00:07Z","path":"/api/orders","status":204,"latency_ms":26,"method":"DELETE","service":"gateway"}

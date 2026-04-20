@@ -1,0 +1,55 @@
+{
+    "functionName": "helloworld:index",
+    "logType": "request:received",
+    "correlationId": "cacd0fd6-2c86-4d9e-bbbe-aad9e7d51bf6",
+    "apiContext": {
+        "version": "2.0",
+        "routeKey": "GET /helloworld",
+        "rawPath": "/helloworld",
+        "rawQueryString": "",
+        "headers": {
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate, br",
+            "cache-control": "no-cache",
+            "content-length": "66",
+            "content-type": "application/json",
+            "host": "censored.execute-api.ap-southeast-1.amazonaws.com",
+            "postman-token": "censored",
+            "user-agent": "PostmanRuntime/7.25.0",
+            "x-amzn-trace-id": "Root=1-censored",
+            "x-forwarded-for": "censored",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https"
+        },
+        "requestContext": {
+            "accountId": "censored",
+            "apiId": "censored",
+            "domainName": "censored.execute-api.ap-southeast-1.amazonaws.com",
+            "domainPrefix": "censored",
+            "http": {
+                "method": "GET",
+                "path": "/helloworld",
+                "protocol": "HTTP/1.1",
+                "sourceIp": "censored",
+                "userAgent": "PostmanRuntime/7.25.0"
+            },
+            "requestId": "Oe17EiOCSQ0EPpA=",
+            "routeKey": "GET /helloworld",
+            "stage": "$default",
+            "time": "21/Jun/2020:14:08:32 +0000",
+            "timeEpoch": 1592748512307
+        },
+        "body": "{\n\t\"id\": \"8\",\n\t\"name\": \"John\",\n\t\"age\": \"17\",\n\t\"gender\": \"male\"\n}",
+        "isBase64Encoded": false
+    },
+    "awsContext": {
+        "awsRequestId": "d68a013f-87fc-4aea-b498-dd830cf2d8b3",
+        "functionName": "HelloWorldApi-prod",
+        "functionVersion": "$LATEST",
+        "logGroupName": "/aws/lambda/HelloWorldApi-prod",
+        "logStreamName": "2020/06/21/[$LATEST]706b25e8f96940cd96dc99e0c8dd212a"
+    },
+    "level": "info",
+    "message": "{\n\t\"id\": \"8\",\n\t\"name\": \"John\",\n\t\"age\": \"17\",\n\t\"gender\": \"male\"\n}",
+    "timestamp": "2020-06-21T14:08:33.264Z"
+}

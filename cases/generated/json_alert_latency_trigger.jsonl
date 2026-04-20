@@ -1,0 +1,6 @@
+{"timestamp":"2026-04-20T13:00:00Z","path":"/api/report","status":200,"latency_ms":40,"method":"GET","service":"reporting"}
+{"timestamp":"2026-04-20T13:00:01Z","path":"/api/report","status":200,"latency_ms":42,"method":"GET","service":"reporting"}
+{"timestamp":"2026-04-20T13:00:02Z","path":"/api/report","status":200,"latency_ms":280,"method":"GET","service":"reporting"}
+{"timestamp":"2026-04-20T13:00:03Z","path":"/api/report","status":200,"latency_ms":320,"method":"GET","service":"reporting"}
+{"timestamp":"2026-04-20T13:00:04Z","path":"/api/report","status":200,"latency_ms":360,"method":"GET","service":"reporting"}
+{"timestamp":"2026-04-20T13:00:05Z","path":"/api/report","status":200,"latency_ms":340,"method":"GET","service":"reporting"}
