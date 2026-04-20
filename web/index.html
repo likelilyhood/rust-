@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>logscope Dashboard</title>
+    <style>
+      :root {
+        --bg: #f2efe8;
+        --panel: rgba(255, 255, 255, 0.82);
+        --panel-soft: rgba(255, 255, 255, 0.72);
+        --text: #1f2933;
+        --muted: #5d6b78;
+        --accent: #0f766e;
+        --accent-soft: #d7f3ef;
+        --danger: #b42318;
+        --warning: #a15c00;
+        --border: rgba(31, 41, 51, 0.08);
+        --shadow: 0 18px 50px rgba(23, 37, 42, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.14), transparent 36%),
+          radial-gradient(circle at top right, rgba(180, 35, 24, 0.08), transparent 28%),
+          linear-gradient(135deg, #f7f3ea, #eef4f2 50%, #f8f5f0);
+        min-height: 100vh;
+      }
+
+      .shell {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 32px 20px 48px;
+      }
+
+      .hero {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: end;
+        margin-bottom: 28px;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(2rem, 5vw, 3.6rem);
+        letter-spacing: -0.04em;
+      }
+
+      .hero p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        max-width: 720px;
+      }
+
+      .badge {
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .card {
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+      }
+
+      .metric-label {
+        font-size: 0.88rem;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      .metric-value {
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        font-weight: 700;
+        letter-spacing: -0.04em;
+      }
+
+      .danger {
+        color: var(--danger);
+      }
+
+      .tables,
+      .support-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+
+      .wide {
+        margin-bottom: 18px;
+      }
+
+      .strip-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+      }
+
+      .strip-title {
+        margin: 0 0 14px;
+        font-size: 1rem;
+        letter-spacing: -0.02em;
+      }
+
+      .section-kicker {
+        margin: 0 0 6px;
+        color: var(--muted);
+        font-size: 0.84rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .section-note {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .mini {
+        background: var(--panel-soft);
+        border: 1px solid rgba(31, 41, 51, 0.07);
+        border-radius: 16px;
+        padding: 14px;
+      }
+
+      .mini-label {
+        color: var(--muted);
+        font-size: 0.82rem;
+        margin-bottom: 8px;
+      }
+
+      .mini-value {
+        font-size: 1.45rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+      }
+
+      .window-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+      }
+
+      .window-card {
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(31, 41, 51, 0.07);
+        border-radius: 18px;
+        padding: 16px;
+      }
+
+      .window-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+
+      .window-name {
+        margin: 0;
+        font-size: 1.05rem;
+        letter-spacing: -0.02em;
+      }
+
+      .window-meta {
+        color: var(--muted);
+        font-size: 0.84rem;
+        text-align: right;
+      }
+
+      .window-stats {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .window-stat {
+        background: rgba(255, 255, 255, 0.68);
+        border-radius: 14px;
+        padding: 10px 12px;
+      }
+
+      .window-stat-label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        margin-bottom: 6px;
+      }
+
+      .window-stat-value {
+        font-size: 1rem;
+        font-weight: 700;
+      }
+
+      .bar-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .bar-row {
+        display: grid;
+        grid-template-columns: minmax(56px, 88px) 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .bar-track {
+        position: relative;
+        height: 10px;
+        background: rgba(31, 41, 51, 0.08);
+        border-radius: 999px;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 0;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #0f766e, #14b8a6);
+      }
+
+      .bar-fill.danger-fill {
+        background: linear-gradient(90deg, #b42318, #f97066);
+      }
+
+      .stat-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: baseline;
+        padding: 10px 0;
+        border-bottom: 1px solid rgba(31, 41, 51, 0.08);
+      }
+
+      .stat-row:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .stat-name {
+        font-weight: 600;
+      }
+
+      .stat-value {
+        color: var(--muted);
+        text-align: right;
+      }
+
+      .empty-state {
+        color: var(--muted);
+        font-size: 0.92rem;
+        padding: 6px 0 2px;
+      }
+
+      .alert-item {
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(31, 41, 51, 0.08);
+      }
+
+      .alert-item:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .alert-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: baseline;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+
+      .alert-meta {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .alert-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(15, 118, 110, 0.12);
+        color: var(--accent);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .alert-pill.warn {
+        background: rgba(161, 92, 0, 0.12);
+        color: var(--warning);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 10px 0;
+        text-align: left;
+        border-bottom: 1px solid rgba(31, 41, 51, 0.08);
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      .footer {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      @media (max-width: 720px) {
+        .hero {
+          flex-direction: column;
+          align-items: start;
+        }
+
+        .window-stats {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <h1>logscope</h1>
+          <p>Real-time JSONL log analytics with rolling windows, percentile summaries, pipeline telemetry, and alerts-ready placeholders.</p>
+        </div>
+        <div class="badge" id="refresh-status">Waiting for metrics...</div>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <div class="metric-label">Total Lines</div>
+          <div class="metric-value" id="total">0</div>
+        </article>
+        <article class="card">
+          <div class="metric-label">Valid Events</div>
+          <div class="metric-value" id="valid">0</div>
+        </article>
+        <article class="card">
+          <div class="metric-label">Invalid Lines</div>
+          <div class="metric-value" id="invalid">0</div>
+        </article>
+        <article class="card">
+          <div class="metric-label">Errors (5xx)</div>
+          <div class="metric-value danger" id="errors">0</div>
+        </article>
+        <article class="card">
+          <div class="metric-label">Error Rate</div>
+          <div class="metric-value" id="error-rate">0.00%</div>
+        </article>
+        <article class="card">
+          <div class="metric-label">Average Latency</div>
+          <div class="metric-value" id="latency-avg">0.0 ms</div>
+        </article>
+        <article class="card">
+          <div class="metric-label">Max Latency</div>
+          <div class="metric-value" id="latency-max">0 ms</div>
+        </article>
+      </section>
+
+      <section class="card wide">
+        <p class="section-kicker">Latency distribution</p>
+        <h2 class="strip-title">Percentiles and peak values</h2>
+        <p class="section-note">The dashboard renders optional percentile fields when they are available, and falls back to placeholders when the backend is still on the older schema.</p>
+        <div class="strip-grid">
+          <div class="mini">
+            <div class="mini-label">P50 Latency</div>
+            <div class="mini-value" id="latency-p50">n/a</div>
+          </div>
+          <div class="mini">
+            <div class="mini-label">P95 Latency</div>
+            <div class="mini-value" id="latency-p95">n/a</div>
+          </div>
+          <div class="mini">
+            <div class="mini-label">P99 Latency</div>
+            <div class="mini-value" id="latency-p99">n/a</div>
+          </div>
+          <div class="mini">
+            <div class="mini-label">Max Latency</div>
+            <div class="mini-value" id="latency-peak">n/a</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card wide">
+        <p class="section-kicker">Rolling windows</p>
+        <h2 class="strip-title">10s, 1m, and 5m views</h2>
+        <p class="section-note">Each card is wired for the richer metrics schema and will gracefully show legacy `recent_60s` data if that is all the server returns.</p>
+        <div class="window-grid" id="window-grid"></div>
+      </section>
+
+      <section class="tables">
+        <article class="card">
+          <div class="metric-label">Status Counts</div>
+          <div class="bar-list" id="status-chart"></div>
+        </article>
+
+        <article class="card">
+          <div class="metric-label">Top Paths</div>
+          <div class="bar-list" id="paths-chart"></div>
+        </article>
+      </section>
+
+      <section class="support-grid wide">
+        <article class="card">
+          <p class="section-kicker">Pipeline telemetry</p>
+          <h2 class="strip-title">Queue and drop stats</h2>
+          <p class="section-note">This panel is ready for queue depth, capacity, parse failures, dropped lines, and drop rate fields without changing the visual style.</p>
+          <div class="stat-list" id="pipeline-stats"></div>
+        </article>
+
+        <article class="card">
+          <p class="section-kicker">Alerts</p>
+          <h2 class="strip-title">Active alerts</h2>
+          <p class="section-note">Placeholder panel for alert rules and active incidents. It will show details as soon as the backend exposes alert payloads.</p>
+          <div id="alerts-panel"></div>
+        </article>
+      </section>
+
+      <div class="footer">Polling <code>/metrics</code> every 2 seconds with all-time, rolling-window, pipeline, and alert-aware views.</div>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

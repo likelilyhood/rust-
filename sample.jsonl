@@ -1,0 +1,5 @@
+{"timestamp":"2026-04-20T12:00:00Z","path":"/api/orders","status":200,"latency_ms":41,"method":"GET","service":"gateway"}
+{"timestamp":"2026-04-20T12:00:01Z","path":"/api/orders","status":502,"latency_ms":128,"method":"GET","service":"gateway"}
+{"timestamp":"2026-04-20T12:00:02Z","path":"/api/users","status":200,"latency_ms":23,"method":"POST","service":"auth"}
+{"timestamp":"2026-04-20T12:00:03Z","path":"/api/orders","status":200,"latency_ms":63,"method":"GET","service":"gateway"}
+not-json
