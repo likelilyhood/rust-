@@ -210,6 +210,8 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "common",
+ "parser",
+ "serde",
  "serde_json",
 ]
 
@@ -536,6 +538,7 @@ dependencies = [
  "axum",
  "common",
  "parser",
+ "serde",
  "tokio",
  "tower-http",
 ]

@@ -11,6 +11,8 @@
 - 支持两种日志格式：
   - JSON Lines
   - 简化版 access log
+- 支持 `auto` 兼容模式，可识别标准 JSONL、泛化 JSON 字段、Apache combined、Lambda 结构化 JSON、Elasticsearch 服务日志
+- 提供 public 原始日志合法化工具，可转换为统一 `LogEvent JSONL`
 - 支持并发解析 pipeline，可配置 `--workers`
 - 支持背压与丢弃策略：
   - `block`
@@ -28,7 +30,7 @@
 - 支持基础告警：
   - 错误率告警
   - p95 延迟告警
-- 自带静态 dashboard，可直接打开浏览器演示
+- 自带静态 dashboard，可直接打开浏览器演示，并支持中英文切换
 - 提供日志生成器 `generator`，便于答辩时制造流量波动与异常场景
 
 ## 二、项目结构
@@ -117,6 +119,57 @@ logscope/
 
 ## 四、运行方式
 
+推荐使用演示脚本启动内置样例：
+
+```bash
+./demo.sh basic
+./demo.sh access
+./demo.sh all-json
+./demo.sh all-access
+./demo.sh normalize-public
+./demo.sh public-normalized
+./demo.sh invalid
+./demo.sh access-invalid
+./demo.sh error-spike
+./demo.sh latency-spike
+./demo.sh burst-stress
+./demo.sh error-alert
+./demo.sh latency-alert
+```
+
+模拟实时输入流时，先启动 TCP 服务，再按数量和间隔推送样例：
+
+```bash
+./demo.sh tcp-server
+./demo.sh stream-json 80 100
+```
+
+其中 `80` 表示推送 80 行，`100` 表示每行间隔 100 ms。也可以指定任意样例文件：
+
+```bash
+./demo.sh stream-file cases/generated/json_burst_stress.jsonl 40 150 127.0.0.1:9001
+```
+
+access 日志流使用：
+
+```bash
+./demo.sh tcp-server-access
+./demo.sh stream-access 30 180
+```
+
+公开原始日志可以先合法化，再进入统一分析流程：
+
+```bash
+./demo.sh normalize-public
+./demo.sh public-normalized
+```
+
+生成文件位于：
+
+- `cases/generated/public_normalized_lambda.jsonl`
+- `cases/generated/public_normalized_apache.jsonl`
+- `cases/generated/public_normalized_elasticsearch.jsonl`
+
 ### 1. 基础运行
 
 使用 JSON 文件输入：
@@ -144,6 +197,8 @@ cat sample.log | cargo run -p server -- --addr 127.0.0.1:3000
 - [http://127.0.0.1:3000/metrics](http://127.0.0.1:3000/metrics)
 - [http://127.0.0.1:3000/alerts](http://127.0.0.1:3000/alerts)
 
+网页中也支持在线导入：选择 `JSON Lines` 或 `Access Log`，粘贴日志内容或选择本地样本文件，点击“导入分析”即可生成一次性分析结果。该操作只分析本次上传内容，不会覆盖服务端正在运行的实时指标。
+
 ### 2. TCP 输入模式
 
 先启动服务端监听 TCP：
@@ -166,7 +221,7 @@ cargo run -p generator -- --mode wave_qps --count 32 --push 127.0.0.1:9001
 --addr 127.0.0.1:3000
 --file sample.log
 --tcp 127.0.0.1:9001
---format json|access
+--format auto|json|access
 --top-n 10
 --workers 4
 --drop-strategy block|drop_newest|drop_oldest|sample_1_in_n
@@ -238,6 +293,39 @@ ok
 ```json
 {
   "active": []
+}
+```
+
+### `POST /imports`
+
+在线导入一段日志内容并返回一次性分析结果。适合前端上传样本文件或粘贴日志文本。
+
+请求体：
+
+```json
+{
+  "format": "json",
+  "content": "{\"timestamp\":\"2026-04-20T12:00:00Z\",\"path\":\"/api/orders\",\"status\":200,\"latency_ms\":42}\n"
+}
+```
+
+`format` 可选值：
+
+- `auto`
+- `json`
+- `access`
+
+返回体：
+
+```json
+{
+  "format": "json",
+  "lines": 1,
+  "metrics": {
+    "total": 1,
+    "valid": 1,
+    "invalid": 0
+  }
 }
 ```
 

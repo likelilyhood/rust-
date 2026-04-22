@@ -12,9 +12,16 @@ use std::{
 use aggregator::MetricsState;
 use anyhow::{Context, Result, anyhow, bail};
 use async_channel::{Receiver, Sender, TrySendError};
-use axum::{Json, Router, extract::State, response::IntoResponse, routing::get};
+use axum::{
+    Json, Router,
+    extract::State,
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+};
 use common::{Alert, AlertsResponse, MetricsResponse, PipelineStats};
 use parser::{ParseError, ParserKind, parse_with_kind};
+use serde::{Deserialize, Serialize};
 use tokio::{
     fs::File,
     io::{self, AsyncBufReadExt, AsyncRead, BufReader},
@@ -61,6 +68,7 @@ struct AppState {
     metrics: SharedState,
     pipeline: PipelineStatsHandle,
     alerts: Arc<RwLock<Vec<Alert>>>,
+    top_n: usize,
 }
 
 #[derive(Debug)]
@@ -97,6 +105,24 @@ enum DropStrategy {
 enum ParsedItem {
     Event(common::LogEvent),
     Invalid,
+}
+
+#[derive(Debug, Deserialize)]
+struct ImportRequest {
+    content: String,
+    format: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+struct ImportResponse {
+    format: String,
+    lines: u64,
+    metrics: MetricsResponse,
+}
+
+#[derive(Debug, Serialize)]
+struct ErrorResponse {
+    error: String,
 }
 
 #[derive(Clone)]
@@ -260,11 +286,13 @@ async fn main() -> Result<()> {
         metrics,
         pipeline,
         alerts,
+        top_n: config.top_n,
     };
     let app = Router::new()
         .route("/health", get(health_handler))
         .route("/metrics", get(metrics_handler))
         .route("/alerts", get(alerts_handler))
+        .route("/imports", post(import_handler))
         .fallback_service(ServeDir::new("web"))
         .with_state(app_state);
 
@@ -278,7 +306,7 @@ fn parse_args(args: Vec<String>) -> Result<Config> {
     let mut addr: SocketAddr = "127.0.0.1:3000".parse().expect("default addr");
     let mut input = InputSource::Stdin;
     let mut tcp = None;
-    let mut format = ParserKind::Json;
+    let mut format = ParserKind::Auto;
     let mut top_n = 10_usize;
     let mut workers = std::thread::available_parallelism()
         .map(|count| count.get())
@@ -312,11 +340,7 @@ fn parse_args(args: Vec<String>) -> Result<Config> {
             "--format" => {
                 i += 1;
                 let value = args.get(i).context("missing value for --format")?;
-                format = match value.as_str() {
-                    "json" => ParserKind::Json,
-                    "access" => ParserKind::Access,
-                    other => bail!("unsupported format: {other}"),
-                };
+                format = parse_format(value)?;
             }
             "--top-n" => {
                 i += 1;
@@ -404,7 +428,7 @@ fn parse_args(args: Vec<String>) -> Result<Config> {
 
 fn print_help() {
     println!(
-        "Usage: cargo run -p server -- [--addr 127.0.0.1:3000] [--file path/to/log.jsonl] [--tcp 127.0.0.1:9001] [--format json|access] [--top-n 10] [--workers 4] [--drop-strategy block|drop_newest|drop_oldest|sample_1_in_n]"
+        "Usage: cargo run -p server -- [--addr 127.0.0.1:3000] [--file path/to/log.jsonl] [--tcp 127.0.0.1:9001] [--format auto|json|access] [--top-n 10] [--workers 4] [--drop-strategy block|drop_newest|drop_oldest|sample_1_in_n]"
     );
     println!("If --file is omitted, the server reads JSON Lines from stdin.");
 }
@@ -423,6 +447,103 @@ async fn alerts_handler(State(state): State<AppState>) -> Json<AlertsResponse> {
     Json(AlertsResponse {
         active: state.alerts.read().await.clone(),
     })
+}
+
+async fn import_handler(
+    State(state): State<AppState>,
+    Json(request): Json<ImportRequest>,
+) -> impl IntoResponse {
+    match analyze_import(&request, state.top_n) {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err(error) => (
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse {
+                error: error.to_string(),
+            }),
+        )
+            .into_response(),
+    }
+}
+
+fn analyze_import(request: &ImportRequest, top_n: usize) -> Result<ImportResponse> {
+    let parser_kind = parse_format(request.format.as_deref().unwrap_or("auto"))?;
+    let mut metrics = MetricsState::new(top_n);
+    let mut lines = 0_u64;
+    let mut parse_failures = 0_u64;
+    let content = request.content.trim();
+    let non_empty_lines = request
+        .content
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count();
+
+    if !content.is_empty()
+        && (non_empty_lines == 1
+            || (content.starts_with('{') && !matches!(parser_kind, ParserKind::Access)))
+    {
+        if let Ok(event) = parse_with_kind(parser_kind, content) {
+            metrics.update(&event);
+            return Ok(ImportResponse {
+                format: format_name(parser_kind).to_string(),
+                lines: non_empty_lines as u64,
+                metrics: metrics.snapshot(PipelineStats {
+                    queue_capacity: 0,
+                    queue_len: 0,
+                    workers: 1,
+                    parse_failures,
+                    dropped_lines: 0,
+                    drop_rate: 0.0,
+                }),
+            });
+        }
+    }
+
+    for line in request.content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        lines += 1;
+        match parse_with_kind(parser_kind, trimmed) {
+            Ok(event) => metrics.update(&event),
+            Err(ParseError::EmptyLine) => {}
+            Err(_) => {
+                parse_failures += 1;
+                metrics.record_invalid();
+            }
+        }
+    }
+
+    Ok(ImportResponse {
+        format: format_name(parser_kind).to_string(),
+        lines,
+        metrics: metrics.snapshot(PipelineStats {
+            queue_capacity: 0,
+            queue_len: 0,
+            workers: 1,
+            parse_failures,
+            dropped_lines: 0,
+            drop_rate: 0.0,
+        }),
+    })
+}
+
+fn parse_format(value: &str) -> Result<ParserKind> {
+    match value {
+        "auto" => Ok(ParserKind::Auto),
+        "json" => Ok(ParserKind::Json),
+        "access" => Ok(ParserKind::Access),
+        other => bail!("unsupported format: {other}"),
+    }
+}
+
+fn format_name(kind: ParserKind) -> &'static str {
+    match kind {
+        ParserKind::Auto => "auto",
+        ParserKind::Json => "json",
+        ParserKind::Access => "access",
+    }
 }
 
 async fn ingest_loop(input: InputSource, ingest: IngestController) -> Result<()> {
@@ -566,4 +687,71 @@ fn unix_ts_string(ts: SystemTime) -> String {
         .unwrap_or_default()
         .as_secs()
         .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ImportRequest, analyze_import};
+
+    #[test]
+    fn analyzes_imported_json_lines() {
+        let request = ImportRequest {
+            format: Some("json".to_string()),
+            content: [
+                r#"{"timestamp":"2026-04-20T12:00:00Z","path":"/ok","status":200,"latency_ms":20,"method":"GET","service":"gateway"}"#,
+                r#"{"timestamp":"2026-04-20T12:00:01Z","path":"/err","status":503,"latency_ms":120,"method":"GET","service":"gateway"}"#,
+                r#"{"path":"/broken","status":"oops"}"#,
+            ]
+            .join("\n"),
+        };
+
+        let response = analyze_import(&request, 5).expect("import analysis");
+        assert_eq!(response.lines, 3);
+        assert_eq!(response.metrics.total, 3);
+        assert_eq!(response.metrics.valid, 2);
+        assert_eq!(response.metrics.invalid, 1);
+        assert_eq!(response.metrics.errors, 1);
+        assert_eq!(response.metrics.pipeline.parse_failures, 1);
+    }
+
+    #[test]
+    fn analyzes_imported_access_lines() {
+        let request = ImportRequest {
+            format: Some("access".to_string()),
+            content: "2026-04-20T12:00:00Z GET /access/orders 201 18 gateway\nbad line".to_string(),
+        };
+
+        let response = analyze_import(&request, 5).expect("import analysis");
+        assert_eq!(response.format, "access");
+        assert_eq!(response.metrics.valid, 1);
+        assert_eq!(response.metrics.invalid, 1);
+    }
+
+    #[test]
+    fn analyzes_pretty_structured_json_as_one_imported_event() {
+        let request = ImportRequest {
+            format: Some("auto".to_string()),
+            content: r#"{
+              "functionName": "hello:index",
+              "apiContext": {
+                "routeKey": "GET /hello",
+                "rawPath": "/hello",
+                "requestContext": {
+                  "http": {
+                    "method": "GET",
+                    "path": "/hello"
+                  }
+                }
+              },
+              "timestamp": "2020-06-21T14:08:33.264Z"
+            }"#
+            .to_string(),
+        };
+
+        let response = analyze_import(&request, 5).expect("import analysis");
+        assert_eq!(response.format, "auto");
+        assert_eq!(response.metrics.total, 1);
+        assert_eq!(response.metrics.valid, 1);
+        assert_eq!(response.metrics.top_paths[0].path, "/hello");
+    }
 }

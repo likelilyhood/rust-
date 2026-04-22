@@ -71,6 +71,18 @@
 
 ## 二、public 目录
 
+public 目录中的原始日志可能来自不同系统，字段和格式并不统一。项目提供 `normalize_public` 合法化程序，将这些原始格式转换为统一的 `LogEvent JSONL`，再交给现有 server 分析。
+
+```bash
+./demo.sh normalize-public
+```
+
+输出文件：
+
+- `generated/public_normalized_lambda.jsonl`
+- `generated/public_normalized_apache.jsonl`
+- `generated/public_normalized_elasticsearch.jsonl`
+
 ### `public_lambda_structured_log.json`
 
 来源：
@@ -106,6 +118,53 @@
 
 ## 三、推荐演示命令
 
+### 0. 全部样例合并演示
+
+JSON / JSONL：
+
+```bash
+./demo.sh all-json
+```
+
+public 原始日志合法化演示：
+
+```bash
+./demo.sh public-normalized
+```
+
+access：
+
+```bash
+./demo.sh all-access
+```
+
+### 0.1 样例模拟输入流
+
+先启动 TCP 服务：
+
+```bash
+./demo.sh tcp-server
+```
+
+再按数量和间隔推送 JSON 样例：
+
+```bash
+./demo.sh stream-json 80 100
+```
+
+推送指定文件：
+
+```bash
+./demo.sh stream-file cases/generated/json_burst_stress.jsonl 40 150 127.0.0.1:9001
+```
+
+access 流式演示：
+
+```bash
+./demo.sh tcp-server-access
+./demo.sh stream-access 30 180
+```
+
 ### 1. JSON 基础演示
 
 ```bash
@@ -118,13 +177,43 @@ cargo run -p server -- --addr 127.0.0.1:3000 --file cases/generated/json_happy_p
 cargo run -p server -- --addr 127.0.0.1:3000 --file cases/generated/access_happy_path.log --format access --workers 4
 ```
 
-### 3. 错误率告警演示
+### 3. JSON 非法日志混合演示
+
+```bash
+cargo run -p server -- --addr 127.0.0.1:3000 --file cases/generated/json_invalid_mixed.jsonl --format json --workers 4
+```
+
+### 4. access 非法日志混合演示
+
+```bash
+cargo run -p server -- --addr 127.0.0.1:3000 --file cases/generated/access_invalid_mixed.log --format access --workers 4
+```
+
+### 5. 错误突增样例演示
+
+```bash
+cargo run -p server -- --addr 127.0.0.1:3000 --file cases/generated/json_error_spike.jsonl --format json --workers 4 --error-rate-threshold 0.2 --error-rate-duration 0
+```
+
+### 6. 延迟突增样例演示
+
+```bash
+cargo run -p server -- --addr 127.0.0.1:3000 --file cases/generated/json_latency_spike.jsonl --format json --workers 4 --p95-threshold-ms 120 --p95-duration 0
+```
+
+### 7. 密集流量样例演示
+
+```bash
+cargo run -p server -- --addr 127.0.0.1:3000 --file cases/generated/json_burst_stress.jsonl --format json --workers 4
+```
+
+### 8. 错误率告警演示
 
 ```bash
 cargo run -p server -- --addr 127.0.0.1:3000 --file cases/generated/json_alert_error_trigger.jsonl --error-rate-threshold 0.2 --error-rate-duration 0
 ```
 
-### 4. 延迟告警演示
+### 9. 延迟告警演示
 
 ```bash
 cargo run -p server -- --addr 127.0.0.1:3000 --file cases/generated/json_alert_latency_trigger.jsonl --p95-threshold-ms 120 --p95-duration 0
