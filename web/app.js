@@ -157,6 +157,13 @@ const I18N = {
     "pipeline.parseFailures": "解析失败",
     "pipeline.droppedLines": "丢弃行数",
     "pipeline.dropRate": "丢弃率",
+    "pipeline.importMode": "分析模式",
+    "pipeline.importModeValue": "在线导入",
+    "pipeline.inputLines": "输入行数",
+    "pipeline.parsedEvents": "解析成功",
+    "pipeline.invalidLines": "解析失败",
+    "pipeline.invalidRate": "失败率",
+    "pipeline.anomalySamples": "异常样本",
     "alerts.kicker": "告警",
     "alerts.title": "活动告警",
     "alerts.note": "当后端返回告警负载时，这里会显示告警规则和当前事件详情。",
@@ -277,6 +284,13 @@ const I18N = {
     "pipeline.parseFailures": "Parse Failures",
     "pipeline.droppedLines": "Dropped Lines",
     "pipeline.dropRate": "Drop Rate",
+    "pipeline.importMode": "Analysis Mode",
+    "pipeline.importModeValue": "Online Import",
+    "pipeline.inputLines": "Input Lines",
+    "pipeline.parsedEvents": "Parsed Events",
+    "pipeline.invalidLines": "Parse Failures",
+    "pipeline.invalidRate": "Failure Rate",
+    "pipeline.anomalySamples": "Anomaly Samples",
     "alerts.kicker": "Alerts",
     "alerts.title": "Active alerts",
     "alerts.note": "This panel shows alert rules and current incident details when the backend exposes alert payloads.",
@@ -1206,7 +1220,32 @@ function renderMetrics(metrics, recordHistory = true) {
   }));
   renderBars(ids.pathsChart, pathItems, false, { cacheKey: "path-bars", compactLabels: true, limit: 10 });
 
+  const pipelineEntries = buildPipelineEntries(metrics);
+  renderKeyValueList(ids.pipelineStats, pipelineEntries, t("empty.pipeline"));
+
+  const alerts = metrics.alerts || metrics.active_alerts || [];
+  renderAlerts(ids.alertsPanel, Array.isArray(alerts) ? alerts : []);
+
+  setText(ids.refreshStatus, `${t("status.updated")} ${new Date().toLocaleTimeString(currentLanguage === "zh" ? "zh-CN" : "en-US")}`);
+}
+
+function buildPipelineEntries(metrics) {
   const pipelineStats = metrics.pipeline || metrics.pipeline_stats || {};
+  const importSnapshot = importPreview && toNumber(pipelineStats.queue_capacity) === 0;
+
+  if (importSnapshot) {
+    const total = toNumber(metrics.total);
+    const invalid = toNumber(firstDefined(metrics.invalid, pipelineStats.parse_failures));
+    return [
+      [t("pipeline.importMode"), t("pipeline.importModeValue")],
+      [t("pipeline.inputLines"), formatInt(total)],
+      [t("pipeline.parsedEvents"), formatInt(metrics.valid)],
+      [t("pipeline.invalidLines"), formatInt(invalid)],
+      [t("pipeline.invalidRate"), formatPercent(total > 0 ? invalid / total : 0)],
+      [t("pipeline.anomalySamples"), formatInt(currentAnomalies.length)],
+    ];
+  }
+
   const pipelineEntries = [];
   const seenLabels = new Set();
 
@@ -1228,12 +1267,8 @@ function renderMetrics(metrics, recordHistory = true) {
 
     pipelineEntries.push([t(labelKey), formatInt(value)]);
   });
-  renderKeyValueList(ids.pipelineStats, pipelineEntries, t("empty.pipeline"));
 
-  const alerts = metrics.alerts || metrics.active_alerts || [];
-  renderAlerts(ids.alertsPanel, Array.isArray(alerts) ? alerts : []);
-
-  setText(ids.refreshStatus, `${t("status.updated")} ${new Date().toLocaleTimeString(currentLanguage === "zh" ? "zh-CN" : "en-US")}`);
+  return pipelineEntries;
 }
 
 function calculateHealth(metrics) {
