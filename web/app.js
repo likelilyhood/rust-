@@ -38,6 +38,16 @@ const ids = {
   incidentMeta: document.getElementById("incident-meta"),
   pathTooltip: document.getElementById("path-tooltip"),
   demoSampleButtons: document.querySelectorAll("[data-demo-sample]"),
+  demoPlay: document.getElementById("demo-play"),
+  demoStop: document.getElementById("demo-stop"),
+  demoStageLabel: document.getElementById("demo-stage-label"),
+  demoStageText: document.getElementById("demo-stage-text"),
+  demoStageProgress: document.getElementById("demo-stage-progress"),
+  demoTimelineItems: document.querySelectorAll("[data-demo-step]"),
+  anomaliesPanel: document.getElementById("anomalies-panel"),
+  exportMarkdown: document.getElementById("export-markdown"),
+  exportJson: document.getElementById("export-json"),
+  reportPreview: document.getElementById("report-preview"),
 };
 
 const I18N = {
@@ -83,6 +93,37 @@ const I18N = {
     "sample.error": "错误突增样例",
     "sample.apache": "Apache 样例",
     "sample.lambda": "Lambda 样例",
+    "demo.kicker": "演示模式",
+    "demo.title": "一键播放故障演化",
+    "demo.note": "自动播放正常流量、错误突增、延迟升高和恢复四个阶段，适合答辩现场展示。",
+    "demo.play": "开始演示",
+    "demo.stop": "停止",
+    "demo.idle": "等待开始",
+    "demo.normal": "正常流量",
+    "demo.normalText": "系统处于健康状态，错误率和延迟保持低位。",
+    "demo.error": "错误突增",
+    "demo.errorText": "订单支付回调出现 5xx，健康评分下滑并触发告警展示。",
+    "demo.latency": "延迟升高",
+    "demo.latencyText": "搜索和库存路径变慢，P95/P99 延迟明显升高。",
+    "demo.recovery": "恢复阶段",
+    "demo.recoveryText": "错误率下降，吞吐与延迟逐步回到稳定区间。",
+    "demo.done": "演示完成",
+    "demo.running": "演示播放中",
+    "anomaly.kicker": "异常明细",
+    "anomaly.title": "最近错误与慢请求",
+    "anomaly.note": "从当前导入日志中提取错误状态码和高延迟样本，便于从统计下钻到具体证据。",
+    "anomaly.empty": "暂无异常样本。导入错误或慢请求日志后会显示在这里。",
+    "anomaly.error": "错误",
+    "anomaly.slow": "慢请求",
+    "anomaly.status": "状态",
+    "anomaly.latency": "延迟",
+    "report.kicker": "分析报告",
+    "report.title": "导出当前分析结果",
+    "report.note": "生成 Markdown 或 JSON 报告，包含健康评分、关键指标、热门路径和异常样本。",
+    "report.markdown": "导出 Markdown",
+    "report.json": "导出 JSON",
+    "report.ready": "报告已生成",
+    "report.empty": "暂无可导出的指标。",
     "overview.kicker": "运行态势",
     "overview.title": "健康评分",
     "overview.validRatio": "有效占比",
@@ -172,6 +213,37 @@ const I18N = {
     "sample.error": "Error spike sample",
     "sample.apache": "Apache sample",
     "sample.lambda": "Lambda sample",
+    "demo.kicker": "Demo mode",
+    "demo.title": "Play incident evolution",
+    "demo.note": "Automatically plays healthy traffic, error spike, latency spike, and recovery stages for presentations.",
+    "demo.play": "Start demo",
+    "demo.stop": "Stop",
+    "demo.idle": "Ready",
+    "demo.normal": "Healthy traffic",
+    "demo.normalText": "The system is healthy with low error rate and latency.",
+    "demo.error": "Error spike",
+    "demo.errorText": "Order payment callbacks return 5xx, lowering the health score and surfacing alerts.",
+    "demo.latency": "Latency spike",
+    "demo.latencyText": "Search and inventory paths slow down, raising P95/P99 latency.",
+    "demo.recovery": "Recovery",
+    "demo.recoveryText": "Errors decrease while throughput and latency return to stable levels.",
+    "demo.done": "Demo complete",
+    "demo.running": "Demo running",
+    "anomaly.kicker": "Anomaly details",
+    "anomaly.title": "Recent errors and slow requests",
+    "anomaly.note": "Extracts error statuses and high-latency samples from the current import for evidence-level drilldown.",
+    "anomaly.empty": "No anomaly samples yet. Import error or slow logs to populate this panel.",
+    "anomaly.error": "Error",
+    "anomaly.slow": "Slow",
+    "anomaly.status": "Status",
+    "anomaly.latency": "Latency",
+    "report.kicker": "Analysis report",
+    "report.title": "Export current analysis",
+    "report.note": "Generate Markdown or JSON with health score, key metrics, top paths, and anomaly samples.",
+    "report.markdown": "Export Markdown",
+    "report.json": "Export JSON",
+    "report.ready": "Report generated",
+    "report.empty": "No metrics available to export yet.",
     "overview.kicker": "Runtime signal",
     "overview.title": "Health score",
     "overview.validRatio": "Valid ratio",
@@ -230,6 +302,12 @@ let pendingRenderFrame = 0;
 let pendingRenderResolve = null;
 const renderCache = new Map();
 const demoSampleCache = new Map();
+let currentAnomalies = [];
+let currentAnalysisSource = "";
+let demoTimer = null;
+let demoSleepResolve = null;
+let demoRunning = false;
+let demoStageIndex = -1;
 
 const DEMO_SAMPLE_CONFIG = {
   error: {
@@ -246,6 +324,29 @@ const DEMO_SAMPLE_CONFIG = {
   },
 };
 
+const DEMO_STAGES = [
+  {
+    key: "normal",
+    sample: () => buildJsonSample("normal", 180),
+    duration: 1600,
+  },
+  {
+    key: "error",
+    sample: () => buildJsonSample("error", 420),
+    duration: 1900,
+  },
+  {
+    key: "latency",
+    sample: () => buildJsonSample("latency", 360),
+    duration: 1900,
+  },
+  {
+    key: "recovery",
+    sample: () => buildJsonSample("recovery", 240),
+    duration: 1600,
+  },
+];
+
 function buildJsonSample(mode, count) {
   const paths = ["/api/orders", "/api/users", "/api/search", "/api/payments/refund", "/api/inventory/reconcile"];
   const services = ["gateway", "auth", "search", "payment", "inventory"];
@@ -253,9 +354,25 @@ function buildJsonSample(mode, count) {
 
   for (let index = 0; index < count; index += 1) {
     const burst = mode === "error" && index > count * 0.36 && index < count * 0.78;
-    const status = burst && index % 3 !== 0 ? [500, 502, 503, 504][index % 4] : [200, 200, 200, 201, 204][index % 5];
-    const latency = burst ? 120 + (index % 9) * 38 : 22 + (index % 12) * 7;
-    const path = burst && index % 2 === 0 ? "/api/orders/checkout/payment/callback" : paths[index % paths.length];
+    const latencySpike = mode === "latency" && index > count * 0.26 && index < count * 0.84;
+    const recoveryTail = mode === "recovery" && index < count * 0.18;
+    const status = burst && index % 3 !== 0
+      ? [500, 502, 503, 504][index % 4]
+      : recoveryTail && index % 9 === 0
+        ? 502
+        : [200, 200, 200, 201, 204][index % 5];
+    const latency = latencySpike
+      ? 240 + (index % 11) * 52
+      : burst
+        ? 120 + (index % 9) * 38
+        : recoveryTail
+          ? 130 + (index % 6) * 22
+          : 22 + (index % 12) * 7;
+    const path = burst && index % 2 === 0
+      ? "/api/orders/checkout/payment/callback"
+      : latencySpike && index % 2 === 0
+        ? "/api/search/catalog/recommendation/rank"
+        : paths[index % paths.length];
     lines.push(
       JSON.stringify({
         timestamp: `2026-04-20T12:${String(Math.floor(index / 60)).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}Z`,
@@ -451,6 +568,159 @@ function getDemoSample(key) {
   };
   demoSampleCache.set(key, sample);
   return sample;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    demoSleepResolve = resolve;
+    demoTimer = window.setTimeout(() => {
+      demoTimer = null;
+      demoSleepResolve = null;
+      resolve();
+    }, ms);
+  });
+}
+
+function parseEventFromJson(line) {
+  try {
+    const event = JSON.parse(line);
+    const status = firstDefined(event.status, event.status_code, event.statusCode, event.http?.status_code);
+    const latency = firstDefined(event.latency_ms, event.duration_ms, event.elapsed_ms, event.duration);
+    const path = firstDefined(
+      event.path,
+      event.url,
+      event.uri,
+      event.rawPath,
+      event.apiContext?.rawPath,
+      event.apiContext?.requestContext?.http?.path,
+    );
+    return {
+      timestamp: event.timestamp || event.time || event["@timestamp"] || "",
+      method: event.method || event.http?.method || event.apiContext?.requestContext?.http?.method || "",
+      path: path || "/",
+      status: toNumber(status, 0),
+      latency_ms: toNumber(latency, 0),
+      service: event.service || event.functionName || event.component || "",
+      raw: line,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseEventFromAccess(line) {
+  const combined = line.match(/^\S+\s+\S+\s+\S+\s+\[[^\]]+\]\s+"([A-Z]+)\s+([^"\s]+)\s+[^"]+"\s+(\d{3})\s+(\d+|-)/);
+  if (combined) {
+    const size = combined[4] === "-" ? 0 : toNumber(combined[4]);
+    return {
+      timestamp: "",
+      method: combined[1],
+      path: combined[2],
+      status: toNumber(combined[3]),
+      latency_ms: Math.max(12, Math.round(size / 42)),
+      service: "access",
+      raw: line,
+    };
+  }
+
+  const simple = line.trim().split(/\s+/);
+  if (simple.length >= 4) {
+    return {
+      timestamp: simple[0],
+      method: simple[1],
+      path: simple[2],
+      status: toNumber(simple[3]),
+      latency_ms: toNumber(simple[4], 0),
+      service: "access",
+      raw: line,
+    };
+  }
+
+  return null;
+}
+
+function parseImportedEvents(content, format) {
+  return content
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      if (format === "access") {
+        return parseEventFromAccess(line);
+      }
+      return parseEventFromJson(line) || parseEventFromAccess(line);
+    })
+    .filter(Boolean);
+}
+
+function extractAnomalies(content, format) {
+  const events = parseImportedEvents(content, format);
+  return events
+    .filter((event) => event.status >= 500 || event.latency_ms >= 180)
+    .sort((a, b) => {
+      const severityA = (a.status >= 500 ? 1000 : 0) + a.latency_ms;
+      const severityB = (b.status >= 500 ? 1000 : 0) + b.latency_ms;
+      return severityB - severityA;
+    })
+    .slice(0, 8);
+}
+
+function renderAnomalies(anomalies) {
+  const signature = JSON.stringify({ language: currentLanguage, anomalies });
+  if (!setSignature("anomalies", signature)) {
+    return;
+  }
+
+  if (!anomalies.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = t("anomaly.empty");
+    ids.anomaliesPanel.replaceChildren(empty);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  anomalies.forEach((event) => {
+    const item = document.createElement("div");
+    item.className = "anomaly-item";
+
+    const head = document.createElement("div");
+    head.className = "anomaly-head";
+
+    const title = document.createElement("div");
+    title.className = "anomaly-path";
+    title.textContent = compactPath(event.path);
+    title.title = event.path;
+    title.dataset.fullPath = event.path;
+
+    const badge = document.createElement("span");
+    badge.className = `anomaly-badge ${event.status >= 500 ? "danger-badge" : ""}`;
+    badge.textContent = event.status >= 500 ? t("anomaly.error") : t("anomaly.slow");
+
+    head.append(title, badge);
+
+    const meta = document.createElement("div");
+    meta.className = "anomaly-meta";
+    meta.textContent = [
+      event.method || null,
+      event.service || null,
+      `${t("anomaly.status")} ${event.status || t("common.na")}`,
+      `${t("anomaly.latency")} ${formatInt(event.latency_ms)} ms`,
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
+    item.append(head, meta);
+    fragment.appendChild(item);
+  });
+
+  ids.anomaliesPanel.replaceChildren(fragment);
+}
+
+function updateAnalysisSource(content, format) {
+  currentAnalysisSource = content;
+  currentAnomalies = extractAnomalies(content, format);
+  renderAnomalies(currentAnomalies);
 }
 
 function compactPath(path) {
@@ -966,6 +1236,107 @@ function renderMetrics(metrics, recordHistory = true) {
   setText(ids.refreshStatus, `${t("status.updated")} ${new Date().toLocaleTimeString(currentLanguage === "zh" ? "zh-CN" : "en-US")}`);
 }
 
+function calculateHealth(metrics) {
+  if (!metrics) {
+    return 100;
+  }
+
+  const total = toNumber(metrics.total);
+  const valid = toNumber(metrics.valid);
+  const invalid = toNumber(metrics.invalid);
+  const errorRate = toNumber(metrics.error_rate);
+  const invalidPenalty = total > 0 ? invalid / total : 0;
+  const validRatio = total > 0 ? valid / total : 1;
+  return Math.round(clamp(100 - errorRate * 100 - invalidPenalty * 45 - (1 - validRatio) * 20, 0, 100));
+}
+
+function topPathLines(metrics) {
+  return (metrics?.top_paths || [])
+    .slice(0, 5)
+    .map((item, index) => `${index + 1}. ${item.path}: ${formatNumber(item.count)}`)
+    .join("\n");
+}
+
+function anomalyLines() {
+  if (!currentAnomalies.length) {
+    return `- ${t("anomaly.empty")}`;
+  }
+
+  return currentAnomalies
+    .map((event) => `- ${event.status >= 500 ? t("anomaly.error") : t("anomaly.slow")} ${event.method || ""} ${event.path} | ${t("anomaly.status")} ${event.status} | ${t("anomaly.latency")} ${formatInt(event.latency_ms)} ms`)
+    .join("\n");
+}
+
+function buildReport(format) {
+  if (!latestMetrics) {
+    return "";
+  }
+
+  const report = {
+    title: "logscope analysis report",
+    generated_at: new Date().toISOString(),
+    health_score: calculateHealth(latestMetrics),
+    metrics: {
+      total: toNumber(latestMetrics.total),
+      valid: toNumber(latestMetrics.valid),
+      invalid: toNumber(latestMetrics.invalid),
+      errors: toNumber(latestMetrics.errors),
+      error_rate: toNumber(latestMetrics.error_rate),
+      latency_avg_ms: toNumber(latestMetrics.latency_avg_ms),
+      latency_p95_ms: toNumber(latestMetrics.latency_p95_ms),
+      latency_p99_ms: toNumber(firstDefined(latestMetrics.latency_p99_ms, latestMetrics.p99_latency_ms)),
+      latency_max_ms: toNumber(latestMetrics.latency_max_ms),
+    },
+    top_paths: latestMetrics.top_paths || [],
+    anomalies: currentAnomalies,
+  };
+
+  if (format === "json") {
+    return JSON.stringify(report, null, 2);
+  }
+
+  return [
+    "# logscope Analysis Report",
+    "",
+    `- Generated at: ${report.generated_at}`,
+    `- Health score: ${report.health_score}%`,
+    `- Total lines: ${formatInt(report.metrics.total)}`,
+    `- Valid events: ${formatInt(report.metrics.valid)}`,
+    `- Invalid lines: ${formatInt(report.metrics.invalid)}`,
+    `- Errors: ${formatInt(report.metrics.errors)}`,
+    `- Error rate: ${formatPercent(report.metrics.error_rate)}`,
+    `- Average latency: ${formatFloat(report.metrics.latency_avg_ms)} ms`,
+    `- P95 latency: ${formatInt(report.metrics.latency_p95_ms)} ms`,
+    `- P99 latency: ${formatInt(report.metrics.latency_p99_ms)} ms`,
+    "",
+    "## Top Paths",
+    topPathLines(latestMetrics) || t("empty.noData"),
+    "",
+    "## Anomaly Samples",
+    anomalyLines(),
+    "",
+  ].join("\n");
+}
+
+function downloadReport(format) {
+  const content = buildReport(format);
+  if (!content) {
+    setText(ids.reportPreview, t("report.empty"));
+    return;
+  }
+
+  const extension = format === "json" ? "json" : "md";
+  const mime = format === "json" ? "application/json" : "text/markdown";
+  const blob = new Blob([content], { type: `${mime};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `logscope-report-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-")}.${extension}`;
+  link.click();
+  URL.revokeObjectURL(url);
+  setText(ids.reportPreview, `${t("report.ready")}: ${link.download}`);
+}
+
 function scheduleRenderMetrics(metrics, recordHistory = true) {
   latestMetrics = metrics;
   if (pendingRenderFrame) {
@@ -990,6 +1361,83 @@ function flashDashboard() {
     void card.offsetWidth;
     card.classList.add("flash");
   });
+}
+
+function updateDemoStage(index) {
+  demoStageIndex = index;
+  const stage = DEMO_STAGES[index];
+  const progress = stage ? ((index + 1) / DEMO_STAGES.length) * 100 : 0;
+  ids.demoTimelineItems.forEach((item) => {
+    const step = Number(item.dataset.demoStep);
+    item.classList.toggle("active", step === index);
+    item.classList.toggle("done", step < index);
+  });
+  ids.demoStageProgress.style.width = `${progress}%`;
+  setText(ids.demoStageLabel, stage ? t(`demo.${stage.key}`) : t("demo.idle"));
+  setText(ids.demoStageText, stage ? t(`demo.${stage.key}Text`) : t("demo.idle"));
+}
+
+function setDemoRunning(running) {
+  demoRunning = running;
+  ids.demoPlay.disabled = running;
+  ids.demoStop.disabled = !running;
+  ids.demoPlay.classList.toggle("loading", running);
+  ids.sparklineCard.classList.toggle("loading", running);
+  setText(ids.importStatus, running ? t("demo.running") : ids.importStatus.textContent);
+}
+
+function stopDemo() {
+  if (demoTimer) {
+    window.clearTimeout(demoTimer);
+    demoTimer = null;
+    const resolve = demoSleepResolve;
+    demoSleepResolve = null;
+    resolve?.();
+  }
+  setDemoRunning(false);
+  updateDemoStage(-1);
+}
+
+async function runDemoMode() {
+  if (demoRunning) {
+    return;
+  }
+
+  setDemoRunning(true);
+  importPreview = true;
+  ids.importFormat.value = "auto";
+  let completed = false;
+  await nextFrame();
+
+  try {
+    for (let index = 0; index < DEMO_STAGES.length; index += 1) {
+      if (!demoRunning) {
+        break;
+      }
+
+      const stage = DEMO_STAGES[index];
+      updateDemoStage(index);
+      const content = stage.sample();
+      runWhenIdle(() => {
+        if (demoRunning && demoStageIndex === index) {
+          ids.importContent.value = content;
+        }
+      });
+      updateAnalysisSource(content, "auto");
+      await analyzeImport(content, "auto", { loadingManaged: true, skipAnomalyUpdate: true });
+      await sleep(stage.duration);
+    }
+
+    if (demoRunning) {
+      ids.importStatus.textContent = t("demo.done");
+      completed = true;
+    }
+  } finally {
+    setDemoRunning(false);
+    if (completed) {
+      ids.demoTimelineItems.forEach((item) => item.classList.add("done"));
+    }
+  }
 }
 
 function setSampleLoading(activeButton, loading) {
@@ -1031,6 +1479,9 @@ async function analyzeImport(content, format, options = {}) {
     }
 
     metricHistory = [];
+    if (!options.skipAnomalyUpdate) {
+      updateAnalysisSource(trimmedContent, format);
+    }
     await scheduleRenderMetrics(payload.metrics);
     flashDashboard();
     importPreview = true;
@@ -1083,6 +1534,8 @@ function applyTranslations() {
     clearRenderCache();
     scheduleRenderMetrics(latestMetrics, false);
   }
+  renderAnomalies(currentAnomalies);
+  updateDemoStage(demoStageIndex);
 }
 
 ids.languageButtons.forEach((button) => {
@@ -1142,13 +1595,32 @@ ids.importSubmit.addEventListener("click", async () => {
 });
 
 ids.importLive.addEventListener("click", () => {
+  stopDemo();
   importPreview = false;
   ids.importStatus.textContent = t("import.liveMode");
   refresh();
 });
 
+ids.demoPlay.addEventListener("click", () => {
+  runDemoMode();
+});
+
+ids.demoStop.addEventListener("click", () => {
+  stopDemo();
+  ids.importStatus.textContent = t("demo.idle");
+});
+
+ids.exportMarkdown.addEventListener("click", () => {
+  downloadReport("markdown");
+});
+
+ids.exportJson.addEventListener("click", () => {
+  downloadReport("json");
+});
+
 ids.demoSampleButtons.forEach((button) => {
   button.addEventListener("click", async () => {
+    stopDemo();
     setSampleLoading(button, true);
     ids.importStatus.textContent = t("import.analyzing");
     await nextFrame();
@@ -1172,5 +1644,6 @@ ids.demoSampleButtons.forEach((button) => {
 });
 
 applyTranslations();
+renderAnomalies(currentAnomalies);
 refresh();
 setInterval(refresh, 2000);

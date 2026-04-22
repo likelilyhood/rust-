@@ -479,6 +479,99 @@
         animation: chipPulse 680ms ease-in-out infinite alternate;
       }
 
+      .primary-button.loading {
+        animation: chipPulse 680ms ease-in-out infinite alternate;
+      }
+
+      .demo-panel {
+        margin-bottom: 18px;
+      }
+
+      .demo-head {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .demo-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .demo-actions .primary-button,
+      .demo-actions .secondary-button,
+      .report-actions .primary-button,
+      .report-actions .secondary-button {
+        width: auto;
+        white-space: nowrap;
+      }
+
+      .demo-stage {
+        margin-top: 16px;
+        padding: 14px;
+        border: 1px solid rgba(37, 99, 235, 0.13);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(219, 234, 254, 0.58), rgba(240, 253, 250, 0.7));
+      }
+
+      .demo-stage-label {
+        font-size: 1.05rem;
+        font-weight: 900;
+        margin-bottom: 4px;
+      }
+
+      .demo-stage-text {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .demo-progress {
+        height: 8px;
+        margin-top: 14px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+      }
+
+      .demo-progress-fill {
+        width: 0;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--accent), var(--insight));
+        transition: width 420ms ease;
+      }
+
+      .demo-timeline {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .demo-step {
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.68);
+        color: var(--muted);
+        font-size: 0.84rem;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      .demo-step.active {
+        border-color: rgba(37, 99, 235, 0.26);
+        background: rgba(219, 234, 254, 0.8);
+        color: var(--insight);
+        box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
+      }
+
+      .demo-step.done {
+        color: var(--accent);
+      }
+
       @keyframes chipPulse {
         from {
           transform: translateY(0);
@@ -742,6 +835,67 @@
         color: var(--warning);
       }
 
+      .anomaly-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .anomaly-item {
+        padding: 12px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.66);
+      }
+
+      .anomaly-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+
+      .anomaly-path {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 850;
+      }
+
+      .anomaly-meta {
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .anomaly-badge {
+        flex: 0 0 auto;
+        padding: 4px 9px;
+        border-radius: 999px;
+        background: rgba(217, 119, 6, 0.13);
+        color: var(--warning);
+        font-size: 0.76rem;
+        font-weight: 850;
+      }
+
+      .anomaly-badge.danger-badge {
+        background: rgba(220, 38, 38, 0.12);
+        color: var(--danger);
+      }
+
+      .report-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .report-preview {
+        min-height: 24px;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
       table {
         width: 100%;
         border-collapse: collapse;
@@ -787,7 +941,9 @@
         .overview-grid,
         .signal-card,
         .donut-wrap,
-        .incident-banner {
+        .incident-banner,
+        .demo-head,
+        .demo-timeline {
           grid-template-columns: 1fr;
         }
 
@@ -841,6 +997,33 @@
         </div>
         <textarea id="import-content" spellcheck="false" data-i18n-placeholder="import.placeholder" placeholder="粘贴 JSON Lines 或 access 日志内容"></textarea>
         <div class="import-status" id="import-status" data-i18n="import.idle">等待导入...</div>
+      </section>
+
+      <section class="card wide demo-panel">
+        <div class="demo-head">
+          <div>
+            <p class="section-kicker" data-i18n="demo.kicker">演示模式</p>
+            <h2 class="strip-title" data-i18n="demo.title">一键播放故障演化</h2>
+            <p class="section-note" data-i18n="demo.note">自动播放正常流量、错误突增、延迟升高和恢复四个阶段，适合答辩现场展示。</p>
+          </div>
+          <div class="demo-actions">
+            <button class="primary-button" id="demo-play" type="button" data-i18n="demo.play">开始演示</button>
+            <button class="secondary-button" id="demo-stop" type="button" data-i18n="demo.stop" disabled>停止</button>
+          </div>
+        </div>
+        <div class="demo-stage">
+          <div class="demo-stage-label" id="demo-stage-label" data-i18n="demo.idle">等待开始</div>
+          <div class="demo-stage-text" id="demo-stage-text" data-i18n="demo.idle">等待开始</div>
+          <div class="demo-progress">
+            <div class="demo-progress-fill" id="demo-stage-progress"></div>
+          </div>
+          <div class="demo-timeline">
+            <div class="demo-step" data-demo-step="0" data-i18n="demo.normal">正常流量</div>
+            <div class="demo-step" data-demo-step="1" data-i18n="demo.error">错误突增</div>
+            <div class="demo-step" data-demo-step="2" data-i18n="demo.latency">延迟升高</div>
+            <div class="demo-step" data-demo-step="3" data-i18n="demo.recovery">恢复阶段</div>
+          </div>
+        </div>
       </section>
 
       <section class="card incident-banner" id="incident-banner">
@@ -981,6 +1164,26 @@
           <h2 class="strip-title" data-i18n="alerts.title">活动告警</h2>
           <p class="section-note" data-i18n="alerts.note">当后端返回告警负载时，这里会显示告警规则和当前事件详情。</p>
           <div id="alerts-panel"></div>
+        </article>
+      </section>
+
+      <section class="support-grid wide">
+        <article class="card">
+          <p class="section-kicker" data-i18n="anomaly.kicker">异常明细</p>
+          <h2 class="strip-title" data-i18n="anomaly.title">最近错误与慢请求</h2>
+          <p class="section-note" data-i18n="anomaly.note">从当前导入日志中提取错误状态码和高延迟样本，便于从统计下钻到具体证据。</p>
+          <div class="anomaly-list" id="anomalies-panel"></div>
+        </article>
+
+        <article class="card">
+          <p class="section-kicker" data-i18n="report.kicker">分析报告</p>
+          <h2 class="strip-title" data-i18n="report.title">导出当前分析结果</h2>
+          <p class="section-note" data-i18n="report.note">生成 Markdown 或 JSON 报告，包含健康评分、关键指标、热门路径和异常样本。</p>
+          <div class="report-actions">
+            <button class="primary-button" id="export-markdown" type="button" data-i18n="report.markdown">导出 Markdown</button>
+            <button class="secondary-button" id="export-json" type="button" data-i18n="report.json">导出 JSON</button>
+          </div>
+          <div class="report-preview" id="report-preview"></div>
         </article>
       </section>
 
