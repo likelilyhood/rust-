@@ -14,6 +14,9 @@ const ids = {
   statusChart: document.getElementById("status-chart"),
   pathsChart: document.getElementById("paths-chart"),
   pipelineStats: document.getElementById("pipeline-stats"),
+  pipelineKicker: document.getElementById("pipeline-kicker"),
+  pipelineTitle: document.getElementById("pipeline-title"),
+  pipelineNote: document.getElementById("pipeline-note"),
   alertsPanel: document.getElementById("alerts-panel"),
   refreshStatus: document.getElementById("refresh-status"),
   languageButtons: document.querySelectorAll("[data-lang-option]"),
@@ -151,6 +154,9 @@ const I18N = {
     "pipeline.kicker": "Pipeline 遥测",
     "pipeline.title": "队列与丢弃统计",
     "pipeline.note": "该面板会展示队列深度、容量、解析失败、丢弃行数和丢弃率等字段。",
+    "pipeline.importKicker": "导入分析",
+    "pipeline.importTitle": "导入分析摘要",
+    "pipeline.importNote": "在线导入不会进入实时队列，这里展示当前样本的输入规模、解析质量和异常样本数。",
     "pipeline.queueCapacity": "队列容量",
     "pipeline.queueDepth": "队列深度",
     "pipeline.workers": "Worker 数",
@@ -278,6 +284,9 @@ const I18N = {
     "pipeline.kicker": "Pipeline telemetry",
     "pipeline.title": "Queue and drop stats",
     "pipeline.note": "This panel shows queue depth, capacity, parse failures, dropped lines, and drop rate fields.",
+    "pipeline.importKicker": "Import analysis",
+    "pipeline.importTitle": "Import summary",
+    "pipeline.importNote": "Online imports bypass the live queue, so this view summarizes input scale, parse quality, and anomaly samples.",
     "pipeline.queueCapacity": "Queue Capacity",
     "pipeline.queueDepth": "Queue Depth",
     "pipeline.workers": "Workers",
@@ -1232,6 +1241,7 @@ function renderMetrics(metrics, recordHistory = true) {
 function buildPipelineEntries(metrics) {
   const pipelineStats = metrics.pipeline || metrics.pipeline_stats || {};
   const importSnapshot = importPreview && toNumber(pipelineStats.queue_capacity) === 0;
+  renderPipelineHeading(importSnapshot);
 
   if (importSnapshot) {
     const total = toNumber(metrics.total);
@@ -1269,6 +1279,12 @@ function buildPipelineEntries(metrics) {
   });
 
   return pipelineEntries;
+}
+
+function renderPipelineHeading(importSnapshot) {
+  setText(ids.pipelineKicker, importSnapshot ? t("pipeline.importKicker") : t("pipeline.kicker"));
+  setText(ids.pipelineTitle, importSnapshot ? t("pipeline.importTitle") : t("pipeline.title"));
+  setText(ids.pipelineNote, importSnapshot ? t("pipeline.importNote") : t("pipeline.note"));
 }
 
 function calculateHealth(metrics) {
