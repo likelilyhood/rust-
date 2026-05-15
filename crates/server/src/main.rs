@@ -67,6 +67,7 @@ impl PipelineStatsHandle {
 struct AppState {
     metrics: SharedState,
     pipeline: PipelineStatsHandle,
+    ingest: IngestController,
     alerts: Arc<RwLock<Vec<Alert>>>,
     top_n: usize,
 }
@@ -120,12 +121,23 @@ struct ImportResponse {
     metrics: MetricsResponse,
 }
 
+#[derive(Debug, Deserialize)]
+struct LiveIngestRequest {
+    content: String,
+}
+
+#[derive(Debug, Serialize)]
+struct LiveIngestResponse {
+    accepted_lines: u64,
+    status: &'static str,
+}
+
 #[derive(Debug, Serialize)]
 struct ErrorResponse {
     error: String,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct IngestController {
     sender: Sender<String>,
     receiver: Receiver<String>,
@@ -285,6 +297,7 @@ async fn main() -> Result<()> {
     let app_state = AppState {
         metrics,
         pipeline,
+        ingest,
         alerts,
         top_n: config.top_n,
     };
@@ -293,6 +306,7 @@ async fn main() -> Result<()> {
         .route("/metrics", get(metrics_handler))
         .route("/alerts", get(alerts_handler))
         .route("/imports", post(import_handler))
+        .route("/ingest", post(live_ingest_handler))
         .fallback_service(ServeDir::new("web"))
         .with_state(app_state);
 
@@ -463,6 +477,40 @@ async fn import_handler(
         )
             .into_response(),
     }
+}
+
+async fn live_ingest_handler(
+    State(state): State<AppState>,
+    Json(request): Json<LiveIngestRequest>,
+) -> impl IntoResponse {
+    let mut accepted_lines = 0_u64;
+
+    for line in request.content.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        accepted_lines += 1;
+        if let Err(error) = state.ingest.submit(trimmed.to_owned(), accepted_lines).await {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(ErrorResponse {
+                    error: error.to_string(),
+                }),
+            )
+                .into_response();
+        }
+    }
+
+    (
+        StatusCode::OK,
+        Json(LiveIngestResponse {
+            accepted_lines,
+            status: "queued",
+        }),
+    )
+        .into_response()
 }
 
 fn analyze_import(request: &ImportRequest, top_n: usize) -> Result<ImportResponse> {

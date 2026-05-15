@@ -4,6 +4,14 @@
 
 ## 一、项目特性
 
+## 答辩素材库
+
+项目固定答辩素材库位于：
+
+- [ppt_assets/midterm_defense](/Users/hood/R语言大作业/ppt_assets/midterm_defense)
+
+该目录默认作为本项目中期答辩、结题答辩和后续展示材料的统一来源。后续功能演进时，答辩相关内容优先同步更新这个目录。
+
 - 使用 Rust workspace 组织代码，模块边界清晰
 - 支持 `stdin`、文件输入、TCP 输入三种日志来源
 - 支持两种日志格式：

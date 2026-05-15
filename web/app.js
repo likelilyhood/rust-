@@ -51,6 +51,19 @@ const ids = {
   exportMarkdown: document.getElementById("export-markdown"),
   exportJson: document.getElementById("export-json"),
   reportPreview: document.getElementById("report-preview"),
+  insightScore: document.getElementById("insight-score"),
+  insightHeadline: document.getElementById("insight-headline"),
+  insightSummary: document.getElementById("insight-summary"),
+  insightActions: document.getElementById("insight-actions"),
+  servicesPanel: document.getElementById("services-panel"),
+  replayStream: document.getElementById("replay-stream"),
+  appShell: document.querySelector(".shell"),
+  bigScreenToggle: document.getElementById("big-screen-toggle"),
+  viewModeButtons: document.querySelectorAll("[data-view-mode]"),
+  compareSave: document.getElementById("compare-save"),
+  compareClear: document.getElementById("compare-clear"),
+  comparePanel: document.getElementById("compare-panel"),
+  historyPanel: document.getElementById("history-panel"),
 };
 
 const I18N = {
@@ -127,6 +140,47 @@ const I18N = {
     "report.json": "导出 JSON",
     "report.ready": "报告已生成",
     "report.empty": "暂无可导出的指标。",
+    "mode.presentation": "展示视图",
+    "mode.ops": "运维视图",
+    "mode.teaching": "教学视图",
+    "screen.big": "大屏模式",
+    "compare.kicker": "对比分析",
+    "compare.title": "与基准样本对比",
+    "compare.note": "保存一份当前分析作为基准，后续导入或演示结果会自动给出变化幅度。",
+    "compare.save": "设为基准",
+    "compare.clear": "清空对比",
+    "compare.empty": "尚未保存基准样本。",
+    "compare.errorRate": "错误率变化",
+    "compare.latency": "P95 变化",
+    "compare.errors": "错误数变化",
+    "compare.total": "请求量变化",
+    "history.kicker": "历史快照",
+    "history.title": "最近分析记录",
+    "history.note": "保存导入、样例和演示阶段的关键结果，便于答辩时快速回看。",
+    "history.empty": "还没有分析记录。",
+    "history.anomalies": "异常样本",
+    "insight.kicker": "智能洞察",
+    "insight.title": "当前风险与建议",
+    "insight.note": "根据错误率、延迟分位数、异常样本和受影响服务自动生成展示结论。",
+    "insight.low": "低风险",
+    "insight.medium": "中风险",
+    "insight.high": "高风险",
+    "insight.empty": "等待导入或演示数据后生成洞察。",
+    "insight.actionErrors": "优先检查 5xx 集中的支付与订单接口。",
+    "insight.actionLatency": "优先关注高延迟路径及其下游依赖。",
+    "insight.actionTraffic": "继续观察吞吐变化和恢复趋势。",
+    "services.kicker": "服务热力榜",
+    "services.title": "受影响服务与接口",
+    "services.note": "按错误数、平均延迟和请求量聚合当前样本，便于定位最值得展示的服务。",
+    "services.empty": "当前没有足够的服务维度样本。",
+    "services.requests": "请求",
+    "services.errors": "错误",
+    "services.avgLatency": "平均延迟",
+    "services.errorRate": "错误率",
+    "replay.kicker": "事件回放",
+    "replay.title": "最近关键事件",
+    "replay.note": "从当前导入日志中抽取具有代表性的请求，按风险优先级滚动展示。",
+    "replay.empty": "暂无可回放的关键事件。",
     "overview.kicker": "运行态势",
     "overview.title": "健康评分",
     "overview.validRatio": "有效占比",
@@ -257,6 +311,47 @@ const I18N = {
     "report.json": "Export JSON",
     "report.ready": "Report generated",
     "report.empty": "No metrics available to export yet.",
+    "mode.presentation": "Presentation View",
+    "mode.ops": "Ops View",
+    "mode.teaching": "Teaching View",
+    "screen.big": "Big Screen",
+    "compare.kicker": "Compare",
+    "compare.title": "Compare with baseline",
+    "compare.note": "Save the current analysis as a baseline and automatically measure later imports or demo stages against it.",
+    "compare.save": "Save Baseline",
+    "compare.clear": "Clear Compare",
+    "compare.empty": "No baseline saved yet.",
+    "compare.errorRate": "Error Rate Delta",
+    "compare.latency": "P95 Delta",
+    "compare.errors": "Error Count Delta",
+    "compare.total": "Request Delta",
+    "history.kicker": "History",
+    "history.title": "Recent analysis snapshots",
+    "history.note": "Stores imports, samples, and demo stages for quick callback during a presentation.",
+    "history.empty": "No analysis snapshots yet.",
+    "history.anomalies": "Anomalies",
+    "insight.kicker": "Smart insight",
+    "insight.title": "Current risk and next steps",
+    "insight.note": "Automatically summarizes the current state from error rate, latency percentiles, anomaly samples, and affected services.",
+    "insight.low": "Low Risk",
+    "insight.medium": "Medium Risk",
+    "insight.high": "High Risk",
+    "insight.empty": "Load import or demo data to generate insights.",
+    "insight.actionErrors": "Inspect payment and order APIs with concentrated 5xx failures first.",
+    "insight.actionLatency": "Prioritize slow paths and their downstream dependencies.",
+    "insight.actionTraffic": "Keep watching throughput changes and recovery trend.",
+    "services.kicker": "Service heatmap",
+    "services.title": "Affected services and APIs",
+    "services.note": "Aggregates the current sample by errors, average latency, and request volume to spotlight the best demo targets.",
+    "services.empty": "Not enough service-level samples yet.",
+    "services.requests": "Requests",
+    "services.errors": "Errors",
+    "services.avgLatency": "Avg Latency",
+    "services.errorRate": "Error Rate",
+    "replay.kicker": "Event replay",
+    "replay.title": "Recent key events",
+    "replay.note": "Pulls representative requests from the current import and displays them in risk order.",
+    "replay.empty": "No key events available yet.",
     "overview.kicker": "Runtime signal",
     "overview.title": "Health score",
     "overview.validRatio": "Valid ratio",
@@ -331,6 +426,10 @@ let demoTimer = null;
 let demoSleepResolve = null;
 let demoRunning = false;
 let demoStageIndex = -1;
+let currentParsedEvents = [];
+let currentViewMode = "presentation";
+let baselineMetrics = null;
+let analysisHistory = [];
 
 const DEMO_SAMPLE_CONFIG = {
   error: {
@@ -740,10 +839,371 @@ function renderAnomalies(anomalies) {
   ids.anomaliesPanel.replaceChildren(fragment);
 }
 
+function computeInsightModel() {
+  if (!latestMetrics) {
+    return null;
+  }
+
+  const errorRate = toNumber(latestMetrics.error_rate);
+  const p95 = toNumber(latestMetrics.latency_p95_ms);
+  const anomalyWeight = Math.min(currentAnomalies.length * 6, 28);
+  const errorWeight = Math.min(errorRate * 100, 45);
+  const latencyWeight = p95 >= 320 ? 32 : p95 >= 180 ? 18 : 8;
+  const score = Math.round(clamp(errorWeight + latencyWeight + anomalyWeight, 8, 100));
+
+  let level = "low";
+  if (score >= 70) {
+    level = "high";
+  } else if (score >= 40) {
+    level = "medium";
+  }
+
+  const errorDominant = errorRate >= 0.18;
+  const latencyDominant = p95 >= 220;
+  const headline = errorDominant
+    ? `${t("insight.high")} · ${formatPercent(errorRate)} ${t("metric.errorRate")}`
+    : latencyDominant
+      ? `${t("insight.medium")} · P95 ${formatInt(p95)} ms`
+      : `${t(`insight.${level}`)} · ${formatInt(currentParsedEvents.length)} ${t("services.requests")}`;
+
+  const affectedServices = computeServiceRows().slice(0, 2).map((row) => row.name).join(" / ");
+  const summary = errorDominant
+    ? `5xx ${t("metric.errors")} ${formatInt(latestMetrics.errors)}，重点受影响服务：${affectedServices || t("common.na")}`
+    : latencyDominant
+      ? `${t("latency.p95")} 达到 ${formatInt(p95)} ms，慢请求主要集中在 ${affectedServices || t("common.na")}`
+      : `${t("trend.title")} 保持平稳，可继续观察 ${t("window.1m")} 与 ${t("window.5m")} 的恢复趋势。`;
+
+  const actions = [];
+  if (errorDominant) {
+    actions.push(t("insight.actionErrors"));
+  }
+  if (latencyDominant) {
+    actions.push(t("insight.actionLatency"));
+  }
+  actions.push(t("insight.actionTraffic"));
+
+  return { score, level, headline, summary, actions };
+}
+
+function renderInsights() {
+  const insight = computeInsightModel();
+  if (!insight) {
+    setText(ids.insightScore, "--");
+    setText(ids.insightHeadline, t("insight.empty"));
+    setText(ids.insightSummary, t("insight.empty"));
+    ids.insightActions.replaceChildren();
+    return;
+  }
+
+  setText(ids.insightScore, `${insight.score}`);
+  setText(ids.insightHeadline, insight.headline);
+  setText(ids.insightSummary, insight.summary);
+  ids.insightScore.dataset.level = insight.level;
+
+  const signature = JSON.stringify({ language: currentLanguage, actions: insight.actions });
+  if (!setSignature("insight-actions", signature)) {
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  insight.actions.forEach((text) => {
+    const item = document.createElement("div");
+    item.className = "insight-action";
+    item.textContent = text;
+    fragment.appendChild(item);
+  });
+  ids.insightActions.replaceChildren(fragment);
+}
+
+function computeServiceRows() {
+  const buckets = new Map();
+  currentParsedEvents.forEach((event) => {
+    const key = event.service || event.path.split("/").filter(Boolean)[0] || "unknown";
+    const bucket = buckets.get(key) || { name: key, requests: 0, errors: 0, latencySum: 0 };
+    bucket.requests += 1;
+    bucket.errors += event.status >= 500 ? 1 : 0;
+    bucket.latencySum += event.latency_ms;
+    buckets.set(key, bucket);
+  });
+
+  return Array.from(buckets.values())
+    .map((bucket) => ({
+      ...bucket,
+      avgLatency: bucket.requests ? bucket.latencySum / bucket.requests : 0,
+      errorRate: bucket.requests ? bucket.errors / bucket.requests : 0,
+    }))
+    .sort((a, b) => {
+      const scoreA = a.errors * 10 + a.avgLatency * 0.03 + a.requests * 0.1;
+      const scoreB = b.errors * 10 + b.avgLatency * 0.03 + b.requests * 0.1;
+      return scoreB - scoreA;
+    })
+    .slice(0, 5);
+}
+
+function renderServices() {
+  const rows = computeServiceRows();
+  const signature = JSON.stringify({ language: currentLanguage, rows });
+  if (!setSignature("services-panel", signature)) {
+    return;
+  }
+
+  if (!rows.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = t("services.empty");
+    ids.servicesPanel.replaceChildren(empty);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  rows.forEach((row) => {
+    const item = document.createElement("div");
+    item.className = "service-item";
+
+    const head = document.createElement("div");
+    head.className = "service-head";
+
+    const name = document.createElement("div");
+    name.className = "service-name";
+    name.textContent = row.name;
+
+    const score = document.createElement("div");
+    score.className = "service-score";
+    score.textContent = `${formatPercent(row.errorRate, 1)} / ${formatInt(Math.round(row.avgLatency))} ms`;
+
+    head.append(name, score);
+
+    const meta = document.createElement("div");
+    meta.className = "service-meta";
+    meta.textContent = [
+      `${t("services.requests")} ${formatInt(row.requests)}`,
+      `${t("services.errors")} ${formatInt(row.errors)}`,
+      `${t("services.avgLatency")} ${formatInt(Math.round(row.avgLatency))} ms`,
+    ].join(" | ");
+
+    const track = document.createElement("div");
+    track.className = "service-track";
+
+    const fill = document.createElement("div");
+    fill.className = "service-fill";
+    fill.style.width = `${clamp(row.errorRate * 100 + row.avgLatency / 8, 16, 100)}%`;
+
+    track.appendChild(fill);
+    item.append(head, meta, track);
+    fragment.appendChild(item);
+  });
+  ids.servicesPanel.replaceChildren(fragment);
+}
+
+function renderReplay() {
+  const events = [...currentParsedEvents]
+    .sort((a, b) => ((b.status >= 500 ? 1000 : 0) + b.latency_ms) - ((a.status >= 500 ? 1000 : 0) + a.latency_ms))
+    .slice(0, 6);
+  const signature = JSON.stringify({ language: currentLanguage, events });
+  if (!setSignature("replay-stream", signature)) {
+    return;
+  }
+
+  if (!events.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = t("replay.empty");
+    ids.replayStream.replaceChildren(empty);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  events.forEach((event, index) => {
+    const item = document.createElement("div");
+    item.className = "replay-item";
+    item.style.animationDelay = `${index * 90}ms`;
+
+    const tag = document.createElement("span");
+    tag.className = `replay-tag ${event.status >= 500 ? "danger-badge" : ""}`;
+    tag.textContent = event.status >= 500 ? t("anomaly.error") : t("anomaly.slow");
+
+    const text = document.createElement("div");
+    text.className = "replay-text";
+    text.textContent = `${event.method || "GET"} ${compactPath(event.path)} · ${t("anomaly.status")} ${event.status} · ${t("anomaly.latency")} ${formatInt(event.latency_ms)} ms`;
+    text.title = `${event.method || "GET"} ${event.path}`;
+
+    item.append(tag, text);
+    fragment.appendChild(item);
+  });
+  ids.replayStream.replaceChildren(fragment);
+}
+
+function renderCompare() {
+  const signature = JSON.stringify({
+    language: currentLanguage,
+    baseline: baselineMetrics,
+    current: latestMetrics && {
+      total: toNumber(latestMetrics.total),
+      errors: toNumber(latestMetrics.errors),
+      error_rate: toNumber(latestMetrics.error_rate),
+      p95: toNumber(latestMetrics.latency_p95_ms),
+    },
+  });
+  if (!setSignature("compare-panel", signature)) {
+    return;
+  }
+
+  if (!baselineMetrics || !latestMetrics) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = t("compare.empty");
+    ids.comparePanel.replaceChildren(empty);
+    return;
+  }
+
+  const rows = [
+    [t("compare.errorRate"), toNumber(latestMetrics.error_rate) - baselineMetrics.errorRate, "%"],
+    [t("compare.latency"), toNumber(latestMetrics.latency_p95_ms) - baselineMetrics.p95, " ms"],
+    [t("compare.errors"), toNumber(latestMetrics.errors) - baselineMetrics.errors, ""],
+    [t("compare.total"), toNumber(latestMetrics.total) - baselineMetrics.total, ""],
+  ];
+
+  const fragment = document.createDocumentFragment();
+  rows.forEach(([label, delta, suffix]) => {
+    const row = document.createElement("div");
+    row.className = "compare-row";
+
+    const name = document.createElement("div");
+    name.className = "compare-name";
+    name.textContent = label;
+
+    const value = document.createElement("div");
+    value.className = `compare-value ${delta > 0 ? "compare-up" : delta < 0 ? "compare-down" : ""}`;
+    const rendered = suffix === "%"
+      ? `${delta >= 0 ? "+" : ""}${(delta * 100).toFixed(2)}%`
+      : `${delta >= 0 ? "+" : ""}${formatInt(Math.round(delta))}${suffix}`;
+    value.textContent = rendered;
+
+    row.append(name, value);
+    fragment.appendChild(row);
+  });
+  ids.comparePanel.replaceChildren(fragment);
+}
+
+function renderHistory() {
+  const signature = JSON.stringify({ language: currentLanguage, history: analysisHistory });
+  if (!setSignature("history-panel", signature)) {
+    return;
+  }
+
+  if (!analysisHistory.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = t("history.empty");
+    ids.historyPanel.replaceChildren(empty);
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+  analysisHistory.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "history-item";
+
+    const head = document.createElement("div");
+    head.className = "history-head";
+
+    const label = document.createElement("div");
+    label.className = "history-label";
+    label.textContent = item.label;
+
+    const time = document.createElement("div");
+    time.className = "history-time";
+    time.textContent = new Date(item.timestamp).toLocaleTimeString(currentLanguage === "zh" ? "zh-CN" : "en-US");
+
+    head.append(label, time);
+
+    const meta = document.createElement("div");
+    meta.className = "history-meta";
+    meta.textContent = [
+      `${t("metric.total")} ${formatInt(item.total)}`,
+      `${t("metric.errors")} ${formatInt(item.errors)}`,
+      `${t("history.anomalies")} ${formatInt(item.anomalies)}`,
+      `P95 ${formatInt(item.p95)} ms`,
+    ].join(" | ");
+
+    row.append(head, meta);
+    fragment.appendChild(row);
+  });
+  ids.historyPanel.replaceChildren(fragment);
+}
+
+function setViewMode(mode) {
+  currentViewMode = mode;
+  document.body.dataset.viewMode = mode;
+  ids.viewModeButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.viewMode === mode);
+  });
+}
+
+function toggleBigScreen() {
+  document.body.classList.toggle("stage-mode");
+}
+
+function focusDemoArea(stageKey) {
+  if (currentViewMode !== "presentation") {
+    return;
+  }
+
+  const target =
+    stageKey === "error"
+      ? ids.anomaliesPanel.closest(".card")
+      : stageKey === "latency"
+        ? ids.replayStream.closest(".card")
+        : stageKey === "recovery"
+          ? ids.comparePanel.closest(".card")
+          : ids.healthRing.closest(".card");
+
+  if (!target) {
+    return;
+  }
+
+  target.classList.remove("flash");
+  void target.offsetWidth;
+  target.classList.add("flash");
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 function updateAnalysisSource(content, format) {
   currentAnalysisSource = content;
+  currentParsedEvents = parseImportedEvents(content, format);
   currentAnomalies = extractAnomalies(content, format);
   renderAnomalies(currentAnomalies);
+  renderInsights();
+  renderServices();
+  renderReplay();
+}
+
+function clearAnalysisSource() {
+  currentAnalysisSource = "";
+  currentParsedEvents = [];
+  currentAnomalies = [];
+  renderAnomalies(currentAnomalies);
+  renderInsights();
+  renderServices();
+  renderReplay();
+}
+
+function pushAnalysisSnapshot(label) {
+  if (!latestMetrics) {
+    return;
+  }
+
+  analysisHistory.unshift({
+    label,
+    timestamp: new Date().toISOString(),
+    total: toNumber(latestMetrics.total),
+    errors: toNumber(latestMetrics.errors),
+    errorRate: toNumber(latestMetrics.error_rate),
+    p95: toNumber(latestMetrics.latency_p95_ms),
+    anomalies: currentAnomalies.length,
+  });
+  analysisHistory = analysisHistory.slice(0, 8);
+  renderHistory();
 }
 
 function compactPath(path) {
@@ -1231,6 +1691,7 @@ function renderMetrics(metrics, recordHistory = true) {
 
   const pipelineEntries = buildPipelineEntries(metrics);
   renderKeyValueList(ids.pipelineStats, pipelineEntries, t("empty.pipeline"));
+  renderCompare();
 
   const alerts = metrics.alerts || metrics.active_alerts || [];
   renderAlerts(ids.alertsPanel, Array.isArray(alerts) ? alerts : []);
@@ -1426,6 +1887,9 @@ function updateDemoStage(index) {
   ids.demoStageProgress.style.width = `${progress}%`;
   setText(ids.demoStageLabel, stage ? t(`demo.${stage.key}`) : t("demo.idle"));
   setText(ids.demoStageText, stage ? t(`demo.${stage.key}Text`) : t("demo.idle"));
+  if (stage) {
+    focusDemoArea(stage.key);
+  }
 }
 
 function setDemoRunning(running) {
@@ -1475,7 +1939,11 @@ async function runDemoMode() {
         }
       });
       updateAnalysisSource(content, "auto");
-      await analyzeImport(content, "auto", { loadingManaged: true, skipAnomalyUpdate: true });
+      await analyzeImport(content, "auto", {
+        loadingManaged: true,
+        skipAnomalyUpdate: true,
+        historyLabel: `${t("demo.title")} · ${t(`demo.${stage.key}`)}`,
+      });
       await sleep(stage.duration);
     }
 
@@ -1536,6 +2004,9 @@ async function analyzeImport(content, format, options = {}) {
     await scheduleRenderMetrics(payload.metrics);
     flashDashboard();
     importPreview = true;
+    if (options.historyLabel) {
+      pushAnalysisSnapshot(options.historyLabel);
+    }
     ids.importStatus.textContent = `${t("import.done")}: ${payload.lines} ${t("import.lines")}`;
   } catch (error) {
     ids.importStatus.textContent = `${t("import.failed")}: ${error.message}`;
@@ -1586,6 +2057,9 @@ function applyTranslations() {
     scheduleRenderMetrics(latestMetrics, false);
   }
   renderAnomalies(currentAnomalies);
+  renderInsights();
+  renderServices();
+  renderReplay();
   updateDemoStage(demoStageIndex);
 }
 
@@ -1642,14 +2116,44 @@ ids.importFile.addEventListener("change", async () => {
 });
 
 ids.importSubmit.addEventListener("click", async () => {
-  await analyzeImport(ids.importContent.value, ids.importFormat.value);
+  await analyzeImport(ids.importContent.value, ids.importFormat.value, { historyLabel: t("import.title") });
 });
 
 ids.importLive.addEventListener("click", () => {
   stopDemo();
   importPreview = false;
+  clearAnalysisSource();
   ids.importStatus.textContent = t("import.liveMode");
   refresh();
+});
+
+ids.bigScreenToggle.addEventListener("click", () => {
+  toggleBigScreen();
+});
+
+ids.viewModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setViewMode(button.dataset.viewMode || "presentation");
+  });
+});
+
+ids.compareSave.addEventListener("click", () => {
+  if (!latestMetrics) {
+    return;
+  }
+
+  baselineMetrics = {
+    total: toNumber(latestMetrics.total),
+    errors: toNumber(latestMetrics.errors),
+    errorRate: toNumber(latestMetrics.error_rate),
+    p95: toNumber(latestMetrics.latency_p95_ms),
+  };
+  renderCompare();
+});
+
+ids.compareClear.addEventListener("click", () => {
+  baselineMetrics = null;
+  renderCompare();
 });
 
 ids.demoPlay.addEventListener("click", () => {
@@ -1687,7 +2191,11 @@ ids.demoSampleButtons.forEach((button) => {
         ids.importContent.value = sample.content;
       });
 
-      await analyzeImport(sample.content, sample.format, { button, loadingManaged: true });
+      await analyzeImport(sample.content, sample.format, {
+        button,
+        loadingManaged: true,
+        historyLabel: t(button.dataset.i18n),
+      });
     } finally {
       setSampleLoading(button, false);
     }
@@ -1696,5 +2204,11 @@ ids.demoSampleButtons.forEach((button) => {
 
 applyTranslations();
 renderAnomalies(currentAnomalies);
+renderInsights();
+renderServices();
+renderReplay();
+renderCompare();
+renderHistory();
+setViewMode(currentViewMode);
 refresh();
 setInterval(refresh, 2000);

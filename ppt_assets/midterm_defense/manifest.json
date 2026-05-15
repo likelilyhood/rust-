@@ -1,0 +1,53 @@
+{
+  "project": "logscope",
+  "bundle": "midterm_defense_assets",
+  "language": "zh-CN",
+  "recommended_entry_files": [
+    "00_MATERIALS_INDEX.md",
+    "01_PROJECT_BRIEF.md",
+    "02_MIDTERM_PPT_OUTLINE.md"
+  ],
+  "files": [
+    {
+      "name": "00_MATERIALS_INDEX.md",
+      "role": "overview"
+    },
+    {
+      "name": "01_PROJECT_BRIEF.md",
+      "role": "project_summary"
+    },
+    {
+      "name": "02_MIDTERM_PPT_OUTLINE.md",
+      "role": "ppt_outline"
+    },
+    {
+      "name": "03_TALK_TRACK.md",
+      "role": "speech_notes"
+    },
+    {
+      "name": "04_DEMO_SCRIPT.md",
+      "role": "demo_flow"
+    },
+    {
+      "name": "05_DATASET_RECOMMENDATIONS.md",
+      "role": "dataset_references"
+    },
+    {
+      "name": "06_FUTURE_ROADMAP.md",
+      "role": "roadmap"
+    },
+    {
+      "name": "07_UPDATE_CHECKLIST.md",
+      "role": "maintenance"
+    },
+    {
+      "name": "08_LIBRARY_POLICY.md",
+      "role": "library_policy"
+    }
+  ],
+  "notes": [
+    "This folder is designed to be dropped into external open source PPT generation tools.",
+    "Keep this bundle updated after each major feature iteration so it can also serve the final defense.",
+    "This folder is the canonical defense material library for the project."
+  ]
+}

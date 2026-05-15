@@ -136,6 +136,13 @@
         gap: 10px;
       }
 
+      .mode-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
       .language-toggle {
         display: inline-flex;
         padding: 4px;
@@ -162,6 +169,23 @@
         color: #fff;
       }
 
+      .mode-chip {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 7px 11px;
+        background: rgba(255, 255, 255, 0.78);
+        color: var(--muted);
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .mode-chip.active {
+        background: var(--insight);
+        color: #fff;
+        border-color: rgba(37, 99, 235, 0.22);
+      }
+
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -183,6 +207,27 @@
 
       .card.flash {
         animation: panelFlash 720ms ease;
+      }
+
+      body.stage-mode .shell {
+        max-width: 1380px;
+      }
+
+      body.stage-mode .metric-value {
+        font-size: clamp(2.3rem, 5vw, 3.4rem);
+      }
+
+      body[data-view-mode="presentation"] .import-panel textarea,
+      body[data-view-mode="presentation"] .report-preview {
+        display: none;
+      }
+
+      body[data-view-mode="teaching"] .section-note {
+        display: block;
+      }
+
+      body[data-view-mode="ops"] .section-note {
+        opacity: 0.72;
       }
 
       @keyframes panelFlash {
@@ -896,6 +941,203 @@
         font-size: 0.9rem;
       }
 
+      .compare-list,
+      .history-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .compare-row,
+      .history-item {
+        padding: 12px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.68);
+      }
+
+      .compare-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+      }
+
+      .compare-name,
+      .history-label {
+        font-weight: 850;
+      }
+
+      .compare-value,
+      .history-time {
+        color: var(--muted);
+        font-weight: 800;
+      }
+
+      .compare-up {
+        color: var(--danger);
+      }
+
+      .compare-down {
+        color: var(--accent);
+      }
+
+      .history-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: baseline;
+        margin-bottom: 6px;
+      }
+
+      .history-meta {
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+
+      .insight-score {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 88px;
+        height: 88px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(37, 99, 235, 0.16));
+        color: var(--accent);
+        font-size: 2rem;
+        font-weight: 900;
+        margin-bottom: 14px;
+      }
+
+      .insight-score[data-level="medium"] {
+        color: var(--warning);
+      }
+
+      .insight-score[data-level="high"] {
+        color: var(--danger);
+      }
+
+      .insight-headline {
+        font-size: 1.05rem;
+        font-weight: 900;
+        margin-bottom: 6px;
+      }
+
+      .insight-summary {
+        color: var(--muted);
+        font-size: 0.92rem;
+        margin-bottom: 12px;
+      }
+
+      .insight-actions {
+        display: grid;
+        gap: 8px;
+      }
+
+      .insight-action {
+        padding: 10px 12px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.66);
+        font-size: 0.9rem;
+      }
+
+      .service-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .service-item {
+        padding: 12px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.68);
+      }
+
+      .service-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: baseline;
+        margin-bottom: 5px;
+      }
+
+      .service-name {
+        font-weight: 850;
+      }
+
+      .service-score {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      .service-meta {
+        color: var(--muted);
+        font-size: 0.84rem;
+        margin-bottom: 10px;
+      }
+
+      .service-track {
+        position: relative;
+        height: 9px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+      }
+
+      .service-fill {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, #2563eb, #14b8a6);
+        transition: width 260ms ease;
+      }
+
+      .replay-stream {
+        display: grid;
+        gap: 10px;
+      }
+
+      .replay-item {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        align-items: center;
+        padding: 11px 12px;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.7);
+        animation: replayFade 420ms ease both;
+      }
+
+      .replay-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 9px;
+        border-radius: 999px;
+        background: rgba(217, 119, 6, 0.13);
+        color: var(--warning);
+        font-size: 0.76rem;
+        font-weight: 850;
+      }
+
+      .replay-text {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.9rem;
+      }
+
+      @keyframes replayFade {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
       table {
         width: 100%;
         border-collapse: collapse;
@@ -962,6 +1204,12 @@
           <p data-i18n="hero.subtitle">实时 JSONL 日志分析，支持滚动窗口、分位数统计、pipeline 遥测和告警面板。</p>
         </div>
         <div class="hero-actions">
+          <div class="mode-row">
+            <button class="mode-chip active" type="button" data-view-mode="presentation" data-i18n="mode.presentation">展示视图</button>
+            <button class="mode-chip" type="button" data-view-mode="ops" data-i18n="mode.ops">运维视图</button>
+            <button class="mode-chip" type="button" data-view-mode="teaching" data-i18n="mode.teaching">教学视图</button>
+            <button class="mode-chip" type="button" id="big-screen-toggle" data-i18n="screen.big">大屏模式</button>
+          </div>
           <div class="language-toggle" aria-label="Language">
             <button type="button" data-lang-option="zh" class="active">中</button>
             <button type="button" data-lang-option="en">EN</button>
@@ -1153,6 +1401,25 @@
 
       <section class="support-grid wide">
         <article class="card">
+          <p class="section-kicker" data-i18n="insight.kicker">智能洞察</p>
+          <h2 class="strip-title" data-i18n="insight.title">当前风险与建议</h2>
+          <p class="section-note" data-i18n="insight.note">根据错误率、延迟分位数、异常样本和受影响服务自动生成展示结论。</p>
+          <div class="insight-score" id="insight-score">--</div>
+          <div class="insight-headline" id="insight-headline">等待导入或演示数据后生成洞察。</div>
+          <div class="insight-summary" id="insight-summary">等待导入或演示数据后生成洞察。</div>
+          <div class="insight-actions" id="insight-actions"></div>
+        </article>
+
+        <article class="card">
+          <p class="section-kicker" data-i18n="services.kicker">服务热力榜</p>
+          <h2 class="strip-title" data-i18n="services.title">受影响服务与接口</h2>
+          <p class="section-note" data-i18n="services.note">按错误数、平均延迟和请求量聚合当前样本，便于定位最值得展示的服务。</p>
+          <div class="service-list" id="services-panel"></div>
+        </article>
+      </section>
+
+      <section class="support-grid wide">
+        <article class="card">
           <p class="section-kicker" id="pipeline-kicker" data-i18n="pipeline.kicker">Pipeline 遥测</p>
           <h2 class="strip-title" id="pipeline-title" data-i18n="pipeline.title">队列与丢弃统计</h2>
           <p class="section-note" id="pipeline-note" data-i18n="pipeline.note">该面板会展示队列深度、容量、解析失败、丢弃行数和丢弃率等字段。</p>
@@ -1176,6 +1443,26 @@
         </article>
 
         <article class="card">
+          <p class="section-kicker" data-i18n="replay.kicker">事件回放</p>
+          <h2 class="strip-title" data-i18n="replay.title">最近关键事件</h2>
+          <p class="section-note" data-i18n="replay.note">从当前导入日志中抽取具有代表性的请求，按风险优先级滚动展示。</p>
+          <div class="replay-stream" id="replay-stream"></div>
+        </article>
+
+        <article class="card">
+          <p class="section-kicker" data-i18n="compare.kicker">对比分析</p>
+          <h2 class="strip-title" data-i18n="compare.title">与基准样本对比</h2>
+          <p class="section-note" data-i18n="compare.note">保存一份当前分析作为基准，后续导入或演示结果会自动给出变化幅度。</p>
+          <div class="report-actions">
+            <button class="primary-button" id="compare-save" type="button" data-i18n="compare.save">设为基准</button>
+            <button class="secondary-button" id="compare-clear" type="button" data-i18n="compare.clear">清空对比</button>
+          </div>
+          <div class="compare-list" id="compare-panel"></div>
+        </article>
+      </section>
+
+      <section class="support-grid wide">
+        <article class="card">
           <p class="section-kicker" data-i18n="report.kicker">分析报告</p>
           <h2 class="strip-title" data-i18n="report.title">导出当前分析结果</h2>
           <p class="section-note" data-i18n="report.note">生成 Markdown 或 JSON 报告，包含健康评分、关键指标、热门路径和异常样本。</p>
@@ -1184,6 +1471,13 @@
             <button class="secondary-button" id="export-json" type="button" data-i18n="report.json">导出 JSON</button>
           </div>
           <div class="report-preview" id="report-preview"></div>
+        </article>
+
+        <article class="card">
+          <p class="section-kicker" data-i18n="history.kicker">历史快照</p>
+          <h2 class="strip-title" data-i18n="history.title">最近分析记录</h2>
+          <p class="section-note" data-i18n="history.note">保存导入、样例和演示阶段的关键结果，便于答辩时快速回看。</p>
+          <div class="history-list" id="history-panel"></div>
         </article>
       </section>
 
