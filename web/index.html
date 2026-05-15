@@ -532,6 +532,10 @@
         margin-bottom: 18px;
       }
 
+      .live-panel {
+        margin-bottom: 18px;
+      }
+
       .demo-head {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -546,10 +550,74 @@
 
       .demo-actions .primary-button,
       .demo-actions .secondary-button,
+      .live-actions .primary-button,
+      .live-actions .secondary-button,
       .report-actions .primary-button,
       .report-actions .secondary-button {
         width: auto;
         white-space: nowrap;
+      }
+
+      .live-controls {
+        display: grid;
+        grid-template-columns: minmax(140px, 1fr) minmax(120px, 180px) minmax(120px, 180px) auto;
+        gap: 12px;
+        align-items: end;
+      }
+
+      .live-actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .live-status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .live-stat {
+        padding: 14px;
+        border: 1px solid rgba(37, 99, 235, 0.12);
+        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(219, 234, 254, 0.44), rgba(240, 253, 250, 0.58));
+      }
+
+      .live-stat-label {
+        color: var(--muted);
+        font-size: 0.78rem;
+        margin-bottom: 6px;
+      }
+
+      .live-stat-value {
+        font-size: 1.2rem;
+        font-weight: 800;
+      }
+
+      .live-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(15, 118, 110, 0.14);
+        background: rgba(236, 253, 245, 0.88);
+        color: var(--accent);
+        font-weight: 800;
+      }
+
+      .live-badge.warn {
+        border-color: rgba(217, 119, 6, 0.16);
+        background: rgba(255, 251, 235, 0.92);
+        color: var(--warning);
+      }
+
+      .live-badge.active {
+        border-color: rgba(37, 99, 235, 0.2);
+        background: rgba(219, 234, 254, 0.92);
+        color: var(--insight);
+        animation: chipPulse 680ms ease-in-out infinite alternate;
       }
 
       .demo-stage {
@@ -1272,6 +1340,59 @@
             <div class="demo-step" data-demo-step="3" data-i18n="demo.recovery">恢复阶段</div>
           </div>
         </div>
+      </section>
+
+      <section class="card wide live-panel">
+        <div class="demo-head">
+          <div>
+            <p class="section-kicker" data-i18n="live.kicker">实时生成器</p>
+            <h2 class="strip-title" data-i18n="live.title">动态日志生成与实时注入</h2>
+            <p class="section-note" data-i18n="live.note">前端按设定节奏持续生成样本日志，并通过 /ingest 注入后端实时 pipeline，用于演示持续流量、错误爆发和延迟抖动。</p>
+          </div>
+          <div class="live-badge" id="live-generator-status" data-i18n="live.idle">待机</div>
+        </div>
+        <div class="live-controls">
+          <label>
+            <span class="field-label" data-i18n="live.scenario">注入场景</span>
+            <select id="live-generator-mode">
+              <option value="healthy" data-i18n="live.mode.healthy">健康流量</option>
+              <option value="error" data-i18n="live.mode.error">错误突增</option>
+              <option value="latency" data-i18n="live.mode.latency">延迟抖动</option>
+              <option value="wave" data-i18n="live.mode.wave">波动混合</option>
+            </select>
+          </label>
+          <label>
+            <span class="field-label" data-i18n="live.rate">每批条数</span>
+            <input id="live-generator-rate" type="number" min="5" max="400" step="5" value="40" />
+          </label>
+          <label>
+            <span class="field-label" data-i18n="live.interval">批次间隔</span>
+            <input id="live-generator-interval" type="number" min="200" max="5000" step="100" value="800" />
+          </label>
+          <div class="live-actions">
+            <button class="primary-button" id="live-generator-start" type="button" data-i18n="live.start">开始注入</button>
+            <button class="secondary-button" id="live-generator-stop" type="button" data-i18n="live.stop" disabled>停止注入</button>
+          </div>
+        </div>
+        <div class="live-status-grid">
+          <div class="live-stat">
+            <div class="live-stat-label" data-i18n="live.sentLines">已发送日志</div>
+            <div class="live-stat-value" id="live-generator-lines">0</div>
+          </div>
+          <div class="live-stat">
+            <div class="live-stat-label" data-i18n="live.sentBatches">已发送批次</div>
+            <div class="live-stat-value" id="live-generator-batches">0</div>
+          </div>
+          <div class="live-stat">
+            <div class="live-stat-label" data-i18n="live.lastMode">当前模式</div>
+            <div class="live-stat-value" id="live-generator-mode-label">健康流量</div>
+          </div>
+          <div class="live-stat">
+            <div class="live-stat-label" data-i18n="live.target">实时接入目标</div>
+            <div class="live-stat-value" id="live-generator-target">POST /ingest</div>
+          </div>
+        </div>
+        <div class="import-status" id="live-generator-note" data-i18n="live.help">可直接接入当前服务；后续也可扩展到真实服务器日志转发或抓包结果清洗后注入。</div>
       </section>
 
       <section class="card incident-banner" id="incident-banner">

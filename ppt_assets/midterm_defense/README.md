@@ -31,6 +31,7 @@
 - `05_DATASET_RECOMMENDATIONS.md`：推荐演示数据集与使用建议
 - `06_FUTURE_ROADMAP.md`：后续演进方向与结题答辩可继续强调的点
 - `07_UPDATE_CHECKLIST.md`：每次版本迭代后建议更新的内容
+- `09_SCOPE_PROGRESS_DEFENSE.md`：中期答辩中解释项目范围、当前进度与后续计划
 - `manifest.json`：给自动化工具读取的结构化素材索引
 
 ## 建议用法

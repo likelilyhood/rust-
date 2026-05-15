@@ -43,6 +43,10 @@
     {
       "name": "08_LIBRARY_POLICY.md",
       "role": "library_policy"
+    },
+    {
+      "name": "09_SCOPE_PROGRESS_DEFENSE.md",
+      "role": "scope_progress_defense"
     }
   ],
   "notes": [

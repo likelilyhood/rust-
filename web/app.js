@@ -47,6 +47,17 @@ const ids = {
   demoStageText: document.getElementById("demo-stage-text"),
   demoStageProgress: document.getElementById("demo-stage-progress"),
   demoTimelineItems: document.querySelectorAll("[data-demo-step]"),
+  liveGeneratorMode: document.getElementById("live-generator-mode"),
+  liveGeneratorRate: document.getElementById("live-generator-rate"),
+  liveGeneratorInterval: document.getElementById("live-generator-interval"),
+  liveGeneratorStart: document.getElementById("live-generator-start"),
+  liveGeneratorStop: document.getElementById("live-generator-stop"),
+  liveGeneratorStatus: document.getElementById("live-generator-status"),
+  liveGeneratorLines: document.getElementById("live-generator-lines"),
+  liveGeneratorBatches: document.getElementById("live-generator-batches"),
+  liveGeneratorModeLabel: document.getElementById("live-generator-mode-label"),
+  liveGeneratorTarget: document.getElementById("live-generator-target"),
+  liveGeneratorNote: document.getElementById("live-generator-note"),
   anomaliesPanel: document.getElementById("anomalies-panel"),
   exportMarkdown: document.getElementById("export-markdown"),
   exportJson: document.getElementById("export-json"),
@@ -125,6 +136,28 @@ const I18N = {
     "demo.recoveryText": "错误率下降，吞吐与延迟逐步回到稳定区间。",
     "demo.done": "演示完成",
     "demo.running": "演示播放中",
+    "live.kicker": "实时生成器",
+    "live.title": "动态日志生成与实时注入",
+    "live.note": "前端按设定节奏持续生成样本日志，并通过 /ingest 注入后端实时 pipeline，用于演示持续流量、错误爆发和延迟抖动。",
+    "live.scenario": "注入场景",
+    "live.mode.healthy": "健康流量",
+    "live.mode.error": "错误突增",
+    "live.mode.latency": "延迟抖动",
+    "live.mode.wave": "波动混合",
+    "live.rate": "每批条数",
+    "live.interval": "批次间隔",
+    "live.start": "开始注入",
+    "live.stop": "停止注入",
+    "live.idle": "待机",
+    "live.running": "实时注入中",
+    "live.sentLines": "已发送日志",
+    "live.sentBatches": "已发送批次",
+    "live.lastMode": "当前模式",
+    "live.target": "实时接入目标",
+    "live.help": "可直接接入当前服务；后续也可扩展到真实服务器日志转发或抓包结果清洗后注入。",
+    "live.started": "实时生成器已启动",
+    "live.stopped": "实时生成器已停止",
+    "live.failed": "实时注入失败",
     "anomaly.kicker": "异常明细",
     "anomaly.title": "最近错误与慢请求",
     "anomaly.note": "从当前导入日志中提取错误状态码和高延迟样本，便于从统计下钻到具体证据。",
@@ -296,6 +329,28 @@ const I18N = {
     "demo.recoveryText": "Errors decrease while throughput and latency return to stable levels.",
     "demo.done": "Demo complete",
     "demo.running": "Demo running",
+    "live.kicker": "Live generator",
+    "live.title": "Dynamic log generation and live injection",
+    "live.note": "The browser keeps generating sample logs on a timer and pushes them to the live pipeline through /ingest for sustained traffic, failure spikes, and latency jitter demos.",
+    "live.scenario": "Scenario",
+    "live.mode.healthy": "Healthy Traffic",
+    "live.mode.error": "Error Spike",
+    "live.mode.latency": "Latency Jitter",
+    "live.mode.wave": "Mixed Wave",
+    "live.rate": "Lines per batch",
+    "live.interval": "Batch interval",
+    "live.start": "Start Injection",
+    "live.stop": "Stop Injection",
+    "live.idle": "Idle",
+    "live.running": "Injecting Live Logs",
+    "live.sentLines": "Lines Sent",
+    "live.sentBatches": "Batches Sent",
+    "live.lastMode": "Current Mode",
+    "live.target": "Live Target",
+    "live.help": "This works with the current service today, and can later extend to real server forwarding or sanitized packet-capture streams.",
+    "live.started": "Live generator started",
+    "live.stopped": "Live generator stopped",
+    "live.failed": "Live injection failed",
     "anomaly.kicker": "Anomaly details",
     "anomaly.title": "Recent errors and slow requests",
     "anomaly.note": "Extracts error statuses and high-latency samples from the current import for evidence-level drilldown.",
@@ -430,6 +485,14 @@ let currentParsedEvents = [];
 let currentViewMode = "presentation";
 let baselineMetrics = null;
 let analysisHistory = [];
+let liveGeneratorTimer = null;
+let liveGeneratorRunning = false;
+let liveGeneratorCursor = 0;
+let liveGeneratorStats = {
+  lines: 0,
+  batches: 0,
+  mode: "healthy",
+};
 
 const DEMO_SAMPLE_CONFIG = {
   error: {
@@ -555,6 +618,56 @@ function buildLambdaSample(count) {
         statusCode: index % 17 === 0 ? 502 : 200,
         duration_ms: index % 17 === 0 ? 260 + index : 35 + (index % 9) * 8,
         timestamp: `2020-06-21T14:${String(Math.floor(index / 60)).padStart(2, "0")}:${String(index % 60).padStart(2, "0")}.264Z`,
+      }),
+    );
+  }
+
+  return lines.join("\n");
+}
+
+function buildLiveBatch(mode, count, cursor) {
+  const paths = [
+    "/api/orders",
+    "/api/orders/checkout/payment/callback",
+    "/api/search/catalog/recommendation/rank",
+    "/api/profile/security",
+    "/api/inventory/reconcile",
+  ];
+  const services = ["gateway", "payment", "search", "profile", "inventory"];
+  const lines = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const seq = cursor + index;
+    const wavePhase = seq % 24;
+    const errorMode = mode === "error" || (mode === "wave" && wavePhase >= 8 && wavePhase <= 13);
+    const latencyMode = mode === "latency" || (mode === "wave" && wavePhase >= 15 && wavePhase <= 21);
+    const path = errorMode
+      ? paths[1]
+      : latencyMode
+        ? paths[2]
+        : paths[seq % paths.length];
+    const status = errorMode && seq % 4 !== 0
+      ? [500, 502, 503, 504][seq % 4]
+      : seq % 17 === 0
+        ? 429
+        : seq % 7 === 0
+          ? 201
+          : 200;
+    const latency = latencyMode
+      ? 220 + (seq % 10) * 41
+      : errorMode
+        ? 120 + (seq % 8) * 27
+        : 24 + (seq % 12) * 6;
+
+    lines.push(
+      JSON.stringify({
+        timestamp: new Date(Date.now() + index * 180).toISOString(),
+        path,
+        status,
+        latency_ms: latency,
+        method: seq % 5 === 0 ? "POST" : "GET",
+        service: services[seq % services.length],
+        source: "live-generator",
       }),
     );
   }
@@ -1204,6 +1317,94 @@ function pushAnalysisSnapshot(label) {
   });
   analysisHistory = analysisHistory.slice(0, 8);
   renderHistory();
+}
+
+function updateLiveGeneratorView(statusKey = liveGeneratorRunning ? "live.running" : "live.idle", tone = "") {
+  ids.liveGeneratorStatus.classList.remove("active", "warn");
+  if (tone) {
+    ids.liveGeneratorStatus.classList.add(tone);
+  }
+  setText(ids.liveGeneratorStatus, t(statusKey));
+  setText(ids.liveGeneratorLines, formatInt(liveGeneratorStats.lines));
+  setText(ids.liveGeneratorBatches, formatInt(liveGeneratorStats.batches));
+  setText(ids.liveGeneratorModeLabel, t(`live.mode.${liveGeneratorStats.mode}`));
+  setText(ids.liveGeneratorTarget, "POST /ingest");
+  ids.liveGeneratorStart.disabled = liveGeneratorRunning;
+  ids.liveGeneratorStop.disabled = !liveGeneratorRunning;
+  ids.liveGeneratorStart.classList.toggle("loading", liveGeneratorRunning);
+}
+
+function stopLiveGenerator(messageKey = "live.stopped", tone = "") {
+  if (liveGeneratorTimer) {
+    window.clearTimeout(liveGeneratorTimer);
+    liveGeneratorTimer = null;
+  }
+  liveGeneratorRunning = false;
+  updateLiveGeneratorView(messageKey === "live.idle" ? "live.idle" : messageKey, tone);
+  if (messageKey !== "live.idle") {
+    ids.liveGeneratorNote.textContent = t(messageKey);
+  }
+}
+
+async function pumpLiveGenerator() {
+  if (!liveGeneratorRunning) {
+    return;
+  }
+
+  const mode = ids.liveGeneratorMode.value || "healthy";
+  const rate = clamp(toNumber(ids.liveGeneratorRate.value, 40), 5, 400);
+  const interval = clamp(toNumber(ids.liveGeneratorInterval.value, 800), 200, 5000);
+  const content = buildLiveBatch(mode, rate, liveGeneratorCursor);
+
+  liveGeneratorStats.mode = mode;
+
+  try {
+    const response = await fetch("/ingest", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ content }),
+    });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || `HTTP ${response.status}`);
+    }
+
+    liveGeneratorCursor += rate;
+    liveGeneratorStats.lines += toNumber(payload.accepted_lines, rate);
+    liveGeneratorStats.batches += 1;
+    updateLiveGeneratorView("live.running", "active");
+    ids.liveGeneratorNote.textContent = `${t("live.running")} · ${t(`live.mode.${mode}`)} · ${formatInt(rate)} / ${formatInt(interval)} ms`;
+
+    if (!importPreview) {
+      refresh();
+    }
+  } catch (error) {
+    stopLiveGenerator("live.failed", "warn");
+    ids.liveGeneratorNote.textContent = `${t("live.failed")}: ${error.message}`;
+    return;
+  }
+
+  liveGeneratorTimer = window.setTimeout(() => {
+    pumpLiveGenerator();
+  }, interval);
+}
+
+function startLiveGenerator() {
+  stopDemo();
+  importPreview = false;
+  clearAnalysisSource();
+  liveGeneratorRunning = true;
+  liveGeneratorStats = {
+    lines: 0,
+    batches: 0,
+    mode: ids.liveGeneratorMode.value || "healthy",
+  };
+  ids.liveGeneratorNote.textContent = t("live.started");
+  updateLiveGeneratorView("live.running", "active");
+  refresh();
+  pumpLiveGenerator();
 }
 
 function compactPath(path) {
@@ -1918,6 +2119,7 @@ async function runDemoMode() {
     return;
   }
 
+  stopLiveGenerator("live.idle");
   setDemoRunning(true);
   importPreview = true;
   ids.importFormat.value = "auto";
@@ -1975,6 +2177,7 @@ async function analyzeImport(content, format, options = {}) {
     return;
   }
 
+  stopLiveGenerator("live.idle");
   ids.importSubmit.disabled = true;
   if (options.button && !options.loadingManaged) {
     setSampleLoading(options.button, true);
@@ -2061,6 +2264,7 @@ function applyTranslations() {
   renderServices();
   renderReplay();
   updateDemoStage(demoStageIndex);
+  updateLiveGeneratorView(liveGeneratorRunning ? "live.running" : "live.idle", liveGeneratorRunning ? "active" : "");
 }
 
 ids.languageButtons.forEach((button) => {
@@ -2125,6 +2329,14 @@ ids.importLive.addEventListener("click", () => {
   clearAnalysisSource();
   ids.importStatus.textContent = t("import.liveMode");
   refresh();
+});
+
+ids.liveGeneratorStart.addEventListener("click", () => {
+  startLiveGenerator();
+});
+
+ids.liveGeneratorStop.addEventListener("click", () => {
+  stopLiveGenerator();
 });
 
 ids.bigScreenToggle.addEventListener("click", () => {
@@ -2209,6 +2421,7 @@ renderServices();
 renderReplay();
 renderCompare();
 renderHistory();
+updateLiveGeneratorView();
 setViewMode(currentViewMode);
 refresh();
 setInterval(refresh, 2000);

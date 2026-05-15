@@ -19,6 +19,7 @@
 
 - 多格式兼容：JSON、Access、Lambda、Elasticsearch
 - 在线导入与实时流式输入
+- 浏览器侧动态日志生成与 `/ingest` 实时注入
 - 健康评分、错误率、分位数、热门路径
 - 动态演示模式
 - 异常明细、事件回放、服务热力榜
@@ -73,3 +74,4 @@
 - `05_DATASET_RECOMMENDATIONS.md`
 - `06_FUTURE_ROADMAP.md`
 - `07_UPDATE_CHECKLIST.md`
+- `09_SCOPE_PROGRESS_DEFENSE.md`
