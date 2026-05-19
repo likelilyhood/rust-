@@ -674,7 +674,7 @@ async fn run_alert_monitor(
             now,
             snapshot
                 .windows
-                .get("10s")
+                .get("1m")
                 .map(|window| window.error_rate)
                 .unwrap_or_default(),
             config.error_rate_threshold,

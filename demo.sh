@@ -291,7 +291,11 @@ case "${command}" in
       --addr 127.0.0.1:3000 \
       --tcp 127.0.0.1:9001 \
       --format auto \
-      --workers 4
+      --workers 4 \
+      --error-rate-threshold 0.2 \
+      --error-rate-duration 0 \
+      --p95-threshold-ms 120 \
+      --p95-duration 0
     ;;
   tcp-server-access)
     run_server "access TCP 推流演示服务" \
@@ -317,18 +321,21 @@ case "${command}" in
     run_generator "wave_qps 推流" \
       --mode wave_qps \
       --count 32 \
+      --interval-ms 80 \
       --push 127.0.0.1:9001
     ;;
   gen-error)
     run_generator "spike_error 推流" \
       --mode spike_error \
       --count 32 \
+      --interval-ms 80 \
       --push 127.0.0.1:9001
     ;;
   gen-latency)
     run_generator "spike_latency 推流" \
       --mode spike_latency \
       --count 32 \
+      --interval-ms 80 \
       --push 127.0.0.1:9001
     ;;
   metrics)

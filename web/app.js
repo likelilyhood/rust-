@@ -485,6 +485,7 @@ let currentParsedEvents = [];
 let currentViewMode = "presentation";
 let baselineMetrics = null;
 let analysisHistory = [];
+let currentAlerts = [];
 let liveGeneratorTimer = null;
 let liveGeneratorRunning = false;
 let liveGeneratorCursor = 0;
@@ -1772,11 +1773,11 @@ function renderAlerts(target, alerts) {
     meta.className = "alert-meta";
     const current = firstDefined(alert.current_value, alert.value);
     const threshold = firstDefined(alert.threshold, alert.limit);
-    const duration = alert.duration || alert.elapsed || "";
+    const duration = firstDefined(alert.duration, alert.elapsed, alert.duration_secs);
     meta.textContent = [
       current !== undefined ? `${t("alerts.current")} ${current}` : null,
       threshold !== undefined ? `${t("alerts.threshold")} ${threshold}` : null,
-      duration ? `${t("alerts.for")} ${duration}` : null,
+      duration !== undefined && duration !== null ? `${t("alerts.for")} ${duration}s` : null,
     ]
       .filter(Boolean)
       .join(" | ");
@@ -1785,6 +1786,21 @@ function renderAlerts(target, alerts) {
     fragment.appendChild(item);
   });
   target.replaceChildren(fragment);
+}
+
+async function fetchAlerts() {
+  try {
+    const response = await fetch("/alerts", { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    const alerts = payload.active || payload.alerts || [];
+    return Array.isArray(alerts) ? alerts : [];
+  } catch {
+    return [];
+  }
 }
 
 function renderWindowCard(window) {
@@ -1837,7 +1853,7 @@ function renderWindowCard(window) {
   return card;
 }
 
-function renderMetrics(metrics, recordHistory = true) {
+function renderMetrics(metrics, recordHistory = true, alerts = currentAlerts) {
   latestMetrics = metrics;
   if (recordHistory) {
     pushMetricHistory(metrics);
@@ -1894,8 +1910,14 @@ function renderMetrics(metrics, recordHistory = true) {
   renderKeyValueList(ids.pipelineStats, pipelineEntries, t("empty.pipeline"));
   renderCompare();
 
-  const alerts = metrics.alerts || metrics.active_alerts || [];
-  renderAlerts(ids.alertsPanel, Array.isArray(alerts) ? alerts : []);
+  const fallbackAlerts = metrics.alerts || metrics.active_alerts || [];
+  const normalizedAlerts = Array.isArray(alerts) && alerts.length
+    ? alerts
+    : Array.isArray(fallbackAlerts)
+      ? fallbackAlerts
+      : [];
+  currentAlerts = normalizedAlerts;
+  renderAlerts(ids.alertsPanel, normalizedAlerts);
 
   setText(ids.refreshStatus, `${t("status.updated")} ${new Date().toLocaleTimeString(currentLanguage === "zh" ? "zh-CN" : "en-US")}`);
 }
@@ -2050,7 +2072,7 @@ function downloadReport(format) {
   setText(ids.reportPreview, `${t("report.ready")}: ${link.download}`);
 }
 
-function scheduleRenderMetrics(metrics, recordHistory = true) {
+function scheduleRenderMetrics(metrics, recordHistory = true, alerts = currentAlerts) {
   latestMetrics = metrics;
   if (pendingRenderFrame) {
     cancelAnimationFrame(pendingRenderFrame);
@@ -2062,7 +2084,7 @@ function scheduleRenderMetrics(metrics, recordHistory = true) {
     pendingRenderFrame = requestAnimationFrame(() => {
       pendingRenderFrame = 0;
       pendingRenderResolve = null;
-      renderMetrics(metrics, recordHistory);
+      renderMetrics(metrics, recordHistory, alerts);
       resolve();
     });
   });
@@ -2204,7 +2226,8 @@ async function analyzeImport(content, format, options = {}) {
     if (!options.skipAnomalyUpdate) {
       updateAnalysisSource(trimmedContent, format);
     }
-    await scheduleRenderMetrics(payload.metrics);
+    currentAlerts = [];
+    await scheduleRenderMetrics(payload.metrics, true, []);
     flashDashboard();
     importPreview = true;
     if (options.historyLabel) {
@@ -2227,13 +2250,17 @@ async function refresh() {
   }
 
   try {
-    const response = await fetch("/metrics", { cache: "no-store" });
+    const [response, alerts] = await Promise.all([
+      fetch("/metrics", { cache: "no-store" }),
+      fetchAlerts(),
+    ]);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
 
     const metrics = await response.json();
-    await scheduleRenderMetrics(metrics);
+    currentAlerts = alerts;
+    await scheduleRenderMetrics(metrics, true, alerts);
   } catch (error) {
     ids.refreshStatus.textContent = `${t("status.refreshFailed")}: ${error.message}`;
   }
@@ -2257,7 +2284,7 @@ function applyTranslations() {
   });
   if (latestMetrics) {
     clearRenderCache();
-    scheduleRenderMetrics(latestMetrics, false);
+    scheduleRenderMetrics(latestMetrics, false, currentAlerts);
   }
   renderAnomalies(currentAnomalies);
   renderInsights();

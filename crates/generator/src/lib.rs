@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use common::LogEvent;
+use time::{Duration as TimeDuration, OffsetDateTime, format_description::well_known::Rfc3339};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mode {
@@ -36,17 +37,18 @@ pub struct Config {
 }
 
 pub fn generate_batch(config: &Config) -> Vec<LogEvent> {
+    let base_time = OffsetDateTime::now_utc();
     (0..config.count)
-        .map(|index| generate_event(index, config))
+        .map(|index| generate_event(index, config, base_time))
         .collect()
 }
 
-pub fn generate_event(index: usize, config: &Config) -> LogEvent {
-    let timestamp = Some(format!(
-        "2026-04-20T12:{:02}:{:02}Z",
-        (index / 60) % 60,
-        index % 60
-    ));
+pub fn generate_event(index: usize, config: &Config, base_time: OffsetDateTime) -> LogEvent {
+    let timestamp = Some(
+        (base_time + TimeDuration::milliseconds((index as i64) * (config.interval_ms as i64)))
+            .format(&Rfc3339)
+            .unwrap_or_else(|_| base_time.unix_timestamp().to_string()),
+    );
 
     let mut status = 200;
     let mut latency_ms = 40 + (index as u64 % 12);
@@ -55,7 +57,7 @@ pub fn generate_event(index: usize, config: &Config) -> LogEvent {
         Mode::Normal => {}
         Mode::SpikeError => {
             let burst_start = config.count / 3;
-            let burst_len = (config.count / 5).max(2);
+            let burst_len = (config.count / 3).max(3);
             if index >= burst_start && index < burst_start + burst_len {
                 status = 500;
                 latency_ms = 280 + (index as u64 % 25);
@@ -109,8 +111,9 @@ pub fn run(config: &Config) -> Result<()> {
         None => None,
     };
 
+    let base_time = OffsetDateTime::now_utc();
     for index in 0..config.count {
-        let event = generate_event(index, config);
+        let event = generate_event(index, config, base_time);
         let line = serde_json::to_string(&event)?;
         writeln!(stdout, "{line}")?;
 

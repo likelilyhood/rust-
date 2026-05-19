@@ -18,6 +18,16 @@
 对应更新文件：
 - `02_MIDTERM_PPT_OUTLINE.md`
 
+### 2.5 兼容回归
+- 之前已经公开的命令是否仍然可用
+- `demo.sh` 的关键链路是否还能跑通
+- 前端是否已经适配新的后端字段和告警逻辑
+
+对应更新文件：
+- `README.md`
+- `cases/README.md`
+- `docs/CHANGE_COMPAT_MEMORY.md`
+
 ### 3. 讲稿与演示顺序
 - 是否新增更适合展示的功能
 - 演示顺序是否需要调整

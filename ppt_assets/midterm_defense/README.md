@@ -21,6 +21,12 @@
 
 如果没有特别说明，后续答辩相关内容都以这个目录为准。
 
+同时，项目功能更新时还应联动参考：
+
+- [docs/CHANGE_COMPAT_MEMORY.md](/Users/hood/R语言大作业/docs/CHANGE_COMPAT_MEMORY.md)
+
+这样可以确保答辩材料更新时，不会遗漏旧命令兼容、前端适配和演示链路回归。
+
 ## 目录说明
 
 - `00_MATERIALS_INDEX.md`：素材总索引，适合先读
