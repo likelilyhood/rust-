@@ -55,6 +55,7 @@
    - `bash -n demo.sh`
    - `node --check web/app.js`
    - `cargo test`
+   - `./scripts/regression_check.sh`
 
 2. 服务基础能力
    - `GET /health`

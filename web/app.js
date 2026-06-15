@@ -38,6 +38,7 @@ const ids = {
   incidentBanner: document.getElementById("incident-banner"),
   incidentTitle: document.getElementById("incident-title"),
   incidentMessage: document.getElementById("incident-message"),
+  incidentContext: document.getElementById("incident-context"),
   incidentMeta: document.getElementById("incident-meta"),
   pathTooltip: document.getElementById("path-tooltip"),
   demoSampleButtons: document.querySelectorAll("[data-demo-sample]"),
@@ -228,6 +229,17 @@ const I18N = {
     "incident.healthyMessage": "当前日志流运行正常。",
     "incident.warnMessage": "错误压力升高，建议关注异常路径。",
     "incident.criticalMessage": "错误率处于高位，适合展示告警与故障分析。",
+    "source.label": "当前来源",
+    "source.live": "实时运行",
+    "source.import": "导入分析",
+    "source.demo": "演示模式",
+    "source.generator": "实时生成器",
+    "source.liveTcp": "TCP 推流",
+    "source.liveHttp": "HTTP 注入",
+    "source.demoNormal": "正常阶段",
+    "source.demoError": "错误阶段",
+    "source.demoLatency": "延迟阶段",
+    "source.demoRecovery": "恢复阶段",
     "window.10s": "10 秒",
     "window.1m": "1 分钟",
     "window.5m": "5 分钟",
@@ -266,6 +278,11 @@ const I18N = {
     "alerts.current": "当前",
     "alerts.threshold": "阈值",
     "alerts.for": "持续",
+    "alerts.rule.error_rate": "错误率告警",
+    "alerts.rule.p95_latency_ms": "P95 延迟告警",
+    "alerts.window.1m": "1 分钟窗口",
+    "alerts.window.unknown": "运行窗口",
+    "alerts.started": "触发于",
     "empty.noData": "暂无数据",
     "empty.pipeline": "后端返回队列和丢弃字段后，pipeline 统计会显示在这里。",
     "common.na": "暂无",
@@ -421,6 +438,17 @@ const I18N = {
     "incident.healthyMessage": "The current log stream looks healthy.",
     "incident.warnMessage": "Error pressure is elevated. Watch the anomalous paths.",
     "incident.criticalMessage": "Error rate is high, which is useful for alert and incident demos.",
+    "source.label": "Current Source",
+    "source.live": "Live Runtime",
+    "source.import": "Import Analysis",
+    "source.demo": "Demo Mode",
+    "source.generator": "Live Generator",
+    "source.liveTcp": "TCP Stream",
+    "source.liveHttp": "HTTP Injection",
+    "source.demoNormal": "Healthy Stage",
+    "source.demoError": "Error Stage",
+    "source.demoLatency": "Latency Stage",
+    "source.demoRecovery": "Recovery Stage",
     "window.10s": "10 Seconds",
     "window.1m": "1 Minute",
     "window.5m": "5 Minutes",
@@ -459,6 +487,11 @@ const I18N = {
     "alerts.current": "current",
     "alerts.threshold": "threshold",
     "alerts.for": "for",
+    "alerts.rule.error_rate": "Error Rate Alert",
+    "alerts.rule.p95_latency_ms": "P95 Latency Alert",
+    "alerts.window.1m": "1 Minute Window",
+    "alerts.window.unknown": "Runtime Window",
+    "alerts.started": "started",
     "empty.noData": "No data yet",
     "empty.pipeline": "Pipeline stats will appear here once the backend exposes queue and drop fields.",
     "common.na": "n/a",
@@ -486,6 +519,10 @@ let currentViewMode = "presentation";
 let baselineMetrics = null;
 let analysisHistory = [];
 let currentAlerts = [];
+let currentSourceState = {
+  mode: "live",
+  detail: "liveTcp",
+};
 let liveGeneratorTimer = null;
 let liveGeneratorRunning = false;
 let liveGeneratorCursor = 0;
@@ -773,6 +810,44 @@ function setText(node, value) {
   if (node.textContent !== value) {
     node.textContent = value;
   }
+}
+
+function setSourceState(mode, detail = "") {
+  currentSourceState = { mode, detail };
+}
+
+function sourceDescription() {
+  const detailKey = currentSourceState.detail ? `source.${currentSourceState.detail}` : "";
+  const modeKey = `source.${currentSourceState.mode}`;
+  const detailText = detailKey ? t(detailKey) : "";
+  const modeText = t(modeKey);
+  return detailText && detailText !== detailKey ? `${modeText} · ${detailText}` : modeText;
+}
+
+function humanTimestamp(raw) {
+  if (!raw) {
+    return "";
+  }
+
+  const numeric = Number(raw);
+  const date = Number.isFinite(numeric)
+    ? new Date(numeric * 1000)
+    : new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    return String(raw);
+  }
+  return date.toLocaleTimeString(currentLanguage === "zh" ? "zh-CN" : "en-US");
+}
+
+function alertDisplayName(name) {
+  return t(`alerts.rule.${name}`) || name || t("alerts.alert");
+}
+
+function alertWindowLabel(name) {
+  if (name === "error_rate" || name === "p95_latency_ms") {
+    return t("alerts.window.1m");
+  }
+  return t("alerts.window.unknown");
 }
 
 function setSignature(key, signature) {
@@ -1345,6 +1420,9 @@ function stopLiveGenerator(messageKey = "live.stopped", tone = "") {
   if (messageKey !== "live.idle") {
     ids.liveGeneratorNote.textContent = t(messageKey);
   }
+  if (!importPreview && !demoRunning) {
+    setSourceState("live", "liveTcp");
+  }
 }
 
 async function pumpLiveGenerator() {
@@ -1402,6 +1480,7 @@ function startLiveGenerator() {
     batches: 0,
     mode: ids.liveGeneratorMode.value || "healthy",
   };
+  setSourceState("generator", "liveHttp");
   ids.liveGeneratorNote.textContent = t("live.started");
   updateLiveGeneratorView("live.running", "active");
   refresh();
@@ -1591,6 +1670,7 @@ function renderIncidentBanner(metrics, health) {
   ids.incidentBanner.classList.toggle("critical", state === "critical");
   setText(ids.incidentTitle, t(`incident.${state}`));
   setText(ids.incidentMessage, t(`incident.${state}Message`));
+  setText(ids.incidentContext, `${t("source.label")}：${sourceDescription()}`);
   setText(ids.incidentMeta, `${formatInt(errors)} / ${formatInt(total)} · ${formatPercent(errorRate)}`);
 }
 
@@ -1761,7 +1841,8 @@ function renderAlerts(target, alerts) {
     title.className = "alert-title";
 
     const name = document.createElement("div");
-    name.textContent = alert.name || alert.rule || t("alerts.alert");
+    const baseName = alert.name || alert.rule || "";
+    name.textContent = `${alertDisplayName(baseName)} · ${alertWindowLabel(baseName)}`;
 
     const pill = document.createElement("span");
     pill.className = `alert-pill ${alert.severity === "warning" ? "warn" : ""}`;
@@ -1774,10 +1855,12 @@ function renderAlerts(target, alerts) {
     const current = firstDefined(alert.current_value, alert.value);
     const threshold = firstDefined(alert.threshold, alert.limit);
     const duration = firstDefined(alert.duration, alert.elapsed, alert.duration_secs);
+    const start = humanTimestamp(firstDefined(alert.start_ts, alert.started_at));
     meta.textContent = [
       current !== undefined ? `${t("alerts.current")} ${current}` : null,
       threshold !== undefined ? `${t("alerts.threshold")} ${threshold}` : null,
       duration !== undefined && duration !== null ? `${t("alerts.for")} ${duration}s` : null,
+      start ? `${t("alerts.started")} ${start}` : null,
     ]
       .filter(Boolean)
       .join(" | ");
@@ -2111,6 +2194,13 @@ function updateDemoStage(index) {
   setText(ids.demoStageLabel, stage ? t(`demo.${stage.key}`) : t("demo.idle"));
   setText(ids.demoStageText, stage ? t(`demo.${stage.key}Text`) : t("demo.idle"));
   if (stage) {
+    const detailMap = {
+      normal: "demoNormal",
+      error: "demoError",
+      latency: "demoLatency",
+      recovery: "demoRecovery",
+    };
+    setSourceState("demo", detailMap[stage.key] || "");
     focusDemoArea(stage.key);
   }
 }
@@ -2134,6 +2224,9 @@ function stopDemo() {
   }
   setDemoRunning(false);
   updateDemoStage(-1);
+  if (!liveGeneratorRunning && !importPreview) {
+    setSourceState("live", "liveTcp");
+  }
 }
 
 async function runDemoMode() {
@@ -2200,6 +2293,7 @@ async function analyzeImport(content, format, options = {}) {
   }
 
   stopLiveGenerator("live.idle");
+  setSourceState("import");
   ids.importSubmit.disabled = true;
   if (options.button && !options.loadingManaged) {
     setSampleLoading(options.button, true);
@@ -2354,6 +2448,7 @@ ids.importLive.addEventListener("click", () => {
   stopDemo();
   importPreview = false;
   clearAnalysisSource();
+  setSourceState("live", "liveTcp");
   ids.importStatus.textContent = t("import.liveMode");
   refresh();
 });

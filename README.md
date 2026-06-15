@@ -126,6 +126,7 @@
 ./demo.sh health
 ./demo.sh metrics
 ./demo.sh alerts
+./scripts/regression_check.sh
 ```
 
 ## 手动运行
@@ -290,6 +291,7 @@ logscope/
 bash -n demo.sh
 node --check web/app.js
 cargo test
+./scripts/regression_check.sh
 ```
 
 此外，项目已经实际验证过：
