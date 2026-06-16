@@ -179,6 +179,33 @@ curl -X POST http://127.0.0.1:3000/imports \
   -d '{"format":"auto","content":"{\"path\":\"/api/orders\",\"status\":200,\"latency_ms\":42}\n{\"path\":\"/api/orders/checkout/payment/callback\",\"status\":502,\"latency_ms\":320}"}'
 ```
 
+## 服务器部署
+
+最简单的部署方式：
+
+```bash
+git clone https://github.com/likelilyhood/rust-.git /opt/logscope
+cd /opt/logscope
+cargo build --release -p server
+chmod +x scripts/server_boot.sh
+./scripts/server_boot.sh
+```
+
+如果需要开机自启，可使用仓库内模板：
+
+```bash
+cp deploy/logscope.service.example /etc/systemd/system/logscope.service
+systemctl daemon-reload
+systemctl enable --now logscope
+systemctl status logscope --no-pager
+```
+
+默认建议：
+
+- 公网只开放 `80/443` 或 `3000`
+- `9001` 仅在需要外部机器直接 TCP 推流时开放
+- 若使用反向代理，保留 `3000` 仅本机监听会更稳妥
+
 ## 主要接口
 
 ### `GET /health`

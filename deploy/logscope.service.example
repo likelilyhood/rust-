@@ -1,0 +1,19 @@
+[Unit]
+Description=logscope realtime log analytics dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/logscope
+Environment=LOGSCOPE_HTTP_ADDR=0.0.0.0:3000
+Environment=LOGSCOPE_TCP_ADDR=127.0.0.1:9001
+Environment=LOGSCOPE_FORMAT=auto
+Environment=LOGSCOPE_WORKERS=4
+ExecStart=/opt/logscope/scripts/server_boot.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
