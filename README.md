@@ -206,6 +206,25 @@ systemctl status logscope --no-pager
 - `9001` 仅在需要外部机器直接 TCP 推流时开放
 - 若使用反向代理，保留 `3000` 仅本机监听会更稳妥
 
+### Nginx 反向代理
+
+如果希望直接通过 `80` 端口访问，可使用：
+
+```bash
+cp deploy/nginx.nginx.conf.example /etc/nginx/nginx.conf
+nginx -t
+systemctl enable --now nginx
+systemctl restart nginx
+```
+
+默认会把：
+
+- `http://服务器IP/`
+
+反代到：
+
+- `http://127.0.0.1:3000/`
+
 ## 主要接口
 
 ### `GET /health`
